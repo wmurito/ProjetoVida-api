@@ -1,4 +1,5 @@
 import os
+import json
 import requests
 from jose import jwt
 from jose.utils import base64url_decode
@@ -40,6 +41,9 @@ def get_cognito_config():
             except ClientError as e:
                 logger.warning(f"Erro ao recuperar segredo do Cognito: {str(e)}")
                 # Continuar com variáveis de ambiente
+    except Exception as e:
+        logger.warning(f"Erro geral ao obter configuração do Cognito: {str(e)}")
+        # Continuar com variáveis de ambiente
     
     # Usar variáveis de ambiente
     return {

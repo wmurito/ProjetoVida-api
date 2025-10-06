@@ -5,6 +5,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 import crud, models, schemas
 from database import SessionLocal, engine
+import os
+
+# Configuração temporária para desenvolvimento com SQLite
+if not os.getenv("DATABASE_URL"):
+    os.environ["DATABASE_URL"] = "sqlite:///./projetovida_dev.db"
 from mangum import Mangum
 from typing import List, Dict, Any, Tuple
 import exportar #
@@ -35,7 +40,10 @@ app = FastAPI(
 # Configurar CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],  # Origem do frontend React/Vite
+    allow_origins=[
+        "http://localhost:5173",
+        "http://192.168.2.101:5173"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -300,25 +308,195 @@ def dashboard_delta_t(
 ):
     return get_media_delta_t(db)
 
-# Endpoints para upload via QR Code
+# Endpoints seguros para upload via QR Code
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import uuid
+import base64
+from datetime import datetime, timedelta
+from pydantic import BaseModel, validator
+
+# Rate limiter
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# Armazenamento de sessões (em produção, usar Redis)
+active_sessions: Dict[str, Dict] = {}
+
+class SecureFileUpload(BaseModel):
+    """Validação segura de upload de arquivo"""
+    fileName: str
+    fileType: str
+    fileData: str
+    
+    @validator('fileName')
+    def validate_file_name(cls, v):
+        if not v or len(v) > 255:
+            raise ValueError('Nome de arquivo inválido')
+        
+        # Verificar caracteres perigosos
+        dangerous_chars = ['..', '/', '\\', '<', '>', ':', '"', '|', '?', '*']
+        if any(char in v for char in dangerous_chars):
+            raise ValueError('Nome de arquivo contém caracteres inválidos')
+        
+        # Verificar extensão
+        allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
+        if not any(v.lower().endswith(ext) for ext in allowed_extensions):
+            raise ValueError('Extensão de arquivo não permitida')
+        
+        return v
+    
+    @validator('fileType')
+    def validate_file_type(cls, v):
+        allowed_types = [
+            'application/pdf',
+            'image/jpeg', 
+            'image/png',
+            'image/jpg'  # Adicionar suporte para image/jpg
+        ]
+        if v not in allowed_types:
+            raise ValueError('Tipo de arquivo não permitido')
+        return v
+    
+    @validator('fileData')
+    def validate_file_data(cls, v):
+        try:
+            # Verificar se é base64 válido
+            if not v.startswith('data:'):
+                raise ValueError('Formato de dados inválido')
+            
+            # Extrair dados base64
+            header, data = v.split(',', 1)
+            decoded = base64.b64decode(data)
+            
+            # Limite de 5MB
+            max_size = 5 * 1024 * 1024
+            if len(decoded) > max_size:
+                raise ValueError('Arquivo muito grande (máximo 5MB)')
+            
+            # Verificar se é base64 válido
+            base64.b64decode(data, validate=True)
+            
+        except Exception as e:
+            raise ValueError(f'Dados de arquivo inválidos: {str(e)}')
+        
+        return v
+
+def validate_session(session_id: str, ip_address: str) -> bool:
+    """Valida se a sessão é válida"""
+    if session_id not in active_sessions:
+        return False
+    
+    session = active_sessions[session_id]
+    
+    # Verificar expiração (5 minutos)
+    if datetime.utcnow() - session['created_at'] > timedelta(minutes=5):
+        del active_sessions[session_id]
+        return False
+    
+    # Atualizar última atividade
+    session['last_activity'] = datetime.utcnow()
+    
+    return True
+
+def create_session(ip_address: str) -> str:
+    """Cria uma nova sessão segura"""
+    session_id = f"upload-{uuid.uuid4()}"
+    
+    active_sessions[session_id] = {
+        'created_at': datetime.utcnow(),
+        'ip_address': ip_address,
+        'uploads_count': 0,
+        'last_activity': datetime.utcnow()
+    }
+    
+    logger.info(f"Sessão criada: {session_id[:8]}...")
+    return session_id
+
 @app.post("/upload-mobile/{session_id}")
-async def upload_mobile(session_id: str, file_data: Dict[str, Any] = Body(...)):
-    """Recebe arquivo do celular e armazena no S3"""
+@limiter.limit("5/minute")  # 5 uploads por minuto por IP
+async def secure_upload_mobile(
+    session_id: str,
+    file_data: SecureFileUpload,
+    request: Request
+):
+    """Endpoint seguro para upload via mobile"""
     try:
-        s3_service.save_upload(session_id, {
-            "fileName": file_data.get("fileName"),
-            "fileType": file_data.get("fileType"),
-            "base64Data": file_data.get("fileData")
-        })
-        return {"success": True, "message": "Arquivo recebido"}
+        # Validar sessão
+        if not validate_session(session_id, request.client.host):
+            logger.warning(f"Tentativa de upload com sessão inválida: {session_id[:8]}...")
+            raise HTTPException(status_code=404, detail="Sessão inválida ou expirada")
+        
+        # Incrementar contador de uploads
+        if session_id in active_sessions:
+            active_sessions[session_id]['uploads_count'] += 1
+        
+        # Log seguro (sem dados sensíveis)
+        logger.info(f"Upload recebido para sessão: {session_id[:8]}...")
+        
+        # Salvar no S3
+        s3_service.save_upload(session_id, file_data.dict())
+        
+        return {"success": True, "message": "Arquivo recebido com sucesso"}
+        
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error(f"Erro ao salvar arquivo: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"Erro no upload: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.get("/upload-status/{session_id}")
-async def check_upload_status(session_id: str):
-    """Verifica se arquivo foi enviado para esta sessão"""
-    data = s3_service.get_upload(session_id)
-    if data:
-        return data
-    raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+@limiter.limit("60/minute")  # 60 verificações por minuto (1 por segundo)
+async def secure_check_upload_status(
+    session_id: str,
+    request: Request
+):
+    """Endpoint seguro para verificar status do upload"""
+    try:
+        # Validar sessão
+        if not validate_session(session_id, request.client.host):
+            raise HTTPException(status_code=404, detail="Sessão inválida ou expirada")
+        
+        # Buscar arquivo no S3
+        data = s3_service.get_upload(session_id)
+        
+        if data:
+            logger.info(f"Arquivo encontrado para sessão: {session_id[:8]}...")
+            return data
+        else:
+            raise HTTPException(status_code=404, detail="Arquivo não encontrado")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro ao verificar status: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
+
+@app.post("/create-upload-session")
+@limiter.limit("10/minute")  # 10 sessões por minuto
+async def create_upload_session(request: Request):
+    """Cria uma nova sessão de upload"""
+    try:
+        session_id = create_session(request.client.host)
+        
+        # Limpar sessões expiradas
+        now = datetime.utcnow()
+        expired_sessions = [
+            sid for sid, session in active_sessions.items()
+            if now - session['created_at'] > timedelta(minutes=5)
+        ]
+        
+        for sid in expired_sessions:
+            del active_sessions[sid]
+        
+        return {
+            "session_id": session_id,
+            "upload_url": f"/upload-mobile/{session_id}",
+            "expires_in": 300  # 5 minutos
+        }
+        
+    except Exception as e:
+        logger.error(f"Erro ao criar sessão: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")

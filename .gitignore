@@ -119,8 +119,10 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
+# Environments - CRÍTICO: Nunca commitar!
 .env
+.env.*
+!.env.example
 .venv
 env/
 venv/
@@ -128,6 +130,18 @@ ENV/
 env.bak/
 venv.bak/
 .venv-new/
+.venv-*/
+
+# AWS Credentials - CRÍTICO!
+.aws/
+aws-credentials
+aws-config
+credentials
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
 
 # Spyder project settings
 .spyderproject
@@ -170,9 +184,13 @@ cython_debug/
 .vscode/
 *.code-workspace
 
-# AWS
+# AWS - CRÍTICO!
 .aws/
 aws-exports.js
+aws-credentials*
+.aws-credentials
+serverless-state.json
+.serverless-state.json
 
 # Serverless directories
 .serverless/
@@ -239,13 +257,39 @@ logs/
 config.local.py
 settings.local.py
 
-# Secrets and sensitive data
+# Secrets and sensitive data - CRÍTICO!
 secrets.json
 .secrets
+*.secret
+*.secrets
+secret_*
+secrets_*
+token.json
+tokens.json
+.token
+.tokens
+auth_token*
+apikey*
+api_key*
+api-key*
+.credentials
+credentials.json
+password*
+passwords*
+.password
+
+# Certificados e chaves privadas
 *.pem
 *.key
 *.crt
 *.p12
+*.pfx
+*.cer
+*.der
+*.csr
+*.keystore
+*.jks
+*.pkcs12
 
 # IDE specific files
 *.sublime-project
@@ -266,3 +310,55 @@ $RECYCLE.BIN/
 uploads/
 temp/
 tmp/
+
+# Arquivos de deploy sensíveis
+params.json
+!params.example.json
+serverless.yml.local
+.serverless/
+
+# Backups de banco de dados
+*.sql
+*.dump
+*.backup
+*.bak
+
+# Arquivos de sessão
+sessions/
+*.session
+
+# Cache e arquivos temporários Python
+.Python
+*.pyc
+*.pyo
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+
+# Arquivos de debug
+*.log
+*.out
+*.err
+debug.log
+error.log
+
+# Arquivos do sistema operacional
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Arquivos de IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node modules (se usar)
+node_modules/
+package-lock.json
+
+# Arquivos de teste com dados sensíveis
+test_data/
+test_credentials*
+*.test.env

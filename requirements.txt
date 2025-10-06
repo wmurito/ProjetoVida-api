@@ -48,3 +48,6 @@ mypy>=1.7.0
 # Security Scanning
 bandit>=1.7.5
 safety>=2.3.0
+
+# Upload Security
+slowapi>=0.1.9

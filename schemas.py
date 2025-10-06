@@ -19,7 +19,7 @@ class HistoriaPatologica(HistoriaPatologicaBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para HistoriaFamiliar
 class HistoriaFamiliarBase(BaseModel):
@@ -39,7 +39,7 @@ class HistoriaFamiliar(HistoriaFamiliarBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para HabitosDeVida
 class HabitosDeVidaBase(BaseModel):
@@ -56,7 +56,7 @@ class HabitosDeVida(HabitosDeVidaBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para Paridade
 class ParidadeBase(BaseModel):
@@ -81,7 +81,7 @@ class Paridade(ParidadeBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para HistoriaDoencaAtual
 class HistoriaDoencaAtualBase(BaseModel):
@@ -98,7 +98,7 @@ class HistoriaDoencaAtual(HistoriaDoencaAtualBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para Histologia
 class HistologiaBase(BaseModel):
@@ -129,7 +129,7 @@ class Histologia(HistologiaBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para Tratamento
 class TratamentoBase(BaseModel):
@@ -162,7 +162,7 @@ class Tratamento(TratamentoBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para Desfecho
 class DesfechoBase(BaseModel):
@@ -186,7 +186,7 @@ class Desfecho(DesfechoBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para TemposDiagnostico
 class TemposDiagnosticoBase(BaseModel):
@@ -205,7 +205,7 @@ class TemposDiagnostico(TemposDiagnosticoBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schema para PacienteHistorico
 class PacienteHistoricoBase(BaseModel):
@@ -217,7 +217,7 @@ class PacienteHistorico(PacienteHistoricoBase):
     paciente_id: int
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 # Schemas para Paciente
 class PacienteBase(BaseModel):
@@ -259,4 +259,4 @@ class Paciente(PacienteBase):
     tempos_diagnostico: Optional[List[TemposDiagnostico]] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
