@@ -1,0 +1,189 @@
+name: 🔒 Security Checks
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Executar verificações de segurança diariamente às 2h UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Fetch all history for better analysis
+    
+    - name: 🐍 Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: 📦 Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install bandit safety detect-secrets
+    
+    - name: 🔍 Run Bandit Security Scan
+      run: |
+        bandit -r . -f json -o bandit-report.json || true
+        bandit -r . -f txt
+    
+    - name: 🛡️ Check for known vulnerabilities
+      run: |
+        safety check --json --output safety-report.json || true
+        safety check
+    
+    - name: 🔐 Detect secrets
+      run: |
+        detect-secrets scan --baseline .secrets.baseline || true
+        detect-secrets audit .secrets.baseline
+    
+    - name: 🧪 Run security tests
+      run: |
+        python -m pytest security_tests.py -v --tb=short
+    
+    - name: 🔒 Custom security check
+      run: |
+        python security_check.py
+    
+    - name: 📊 Upload security reports
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: security-reports
+        path: |
+          bandit-report.json
+          safety-report.json
+          .secrets.baseline
+    
+    - name: 🚨 Comment PR with security results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          
+          // Read security reports
+          let banditResults = '';
+          let safetyResults = '';
+          
+          try {
+            const banditData = JSON.parse(fs.readFileSync('bandit-report.json', 'utf8'));
+            const highIssues = banditData.results.filter(r => r.issue_severity === 'HIGH');
+            const mediumIssues = banditData.results.filter(r => r.issue_severity === 'MEDIUM');
+            
+            banditResults = `## 🔒 Bandit Security Scan Results
+            - **High Severity**: ${highIssues.length} issues
+            - **Medium Severity**: ${mediumIssues.length} issues
+            
+            ${highIssues.length > 0 ? '⚠️ **High severity issues found!**' : '✅ No high severity issues'}
+            `;
+          } catch (e) {
+            banditResults = '❌ Could not parse Bandit results';
+          }
+          
+          try {
+            const safetyData = JSON.parse(fs.readFileSync('safety-report.json', 'utf8'));
+            safetyResults = `## 🛡️ Safety Check Results
+            - **Vulnerabilities**: ${safetyData.length} found
+            
+            ${safetyData.length > 0 ? '⚠️ **Vulnerable dependencies found!**' : '✅ No vulnerable dependencies'}
+            `;
+          } catch (e) {
+            safetyResults = '❌ Could not parse Safety results';
+          }
+          
+          const comment = `# 🔒 Security Scan Results
+          
+          ${banditResults}
+          
+          ${safetyResults}
+          
+          ---
+          *Security scan completed on ${new Date().toISOString()}*
+          `;
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });
+
+  dependency-review:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🔍 Dependency Review
+      uses: actions/dependency-review-action@v3
+      with:
+        fail-on-severity: moderate
+        allow-licenses: MIT, Apache-2.0, BSD-3-Clause, ISC
+
+  codeql-analysis:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
+      security-events: write
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [ 'python' ]
+    
+    steps:
+    - name: 📥 Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: 🔍 Initialize CodeQL
+      uses: github/codeql-action/init@v2
+      with:
+        languages: ${{ matrix.language }}
+    
+    - name: 🔧 Autobuild
+      uses: github/codeql-action/autobuild@v2
+    
+    - name: 🔍 Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v2
+      with:
+        category: "/language:${{matrix.language}}"
+
+  docker-security:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+    
+    - name: 🐳 Build Docker image
+      run: |
+        # Build Docker image if Dockerfile exists
+        if [ -f Dockerfile ]; then
+          docker build -t projetovida-api:latest .
+        fi
+    
+    - name: 🔒 Scan Docker image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: 'projetovida-api:latest'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: 📊 Upload Trivy scan results
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'

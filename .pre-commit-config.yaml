@@ -1,0 +1,92 @@
+# 🔒 Pre-commit hooks para segurança e qualidade de código
+repos:
+  # Formatação de código
+  - repo: https://github.com/psf/black
+    rev: 23.12.1
+    hooks:
+      - id: black
+        language_version: python3
+        args: [--line-length=88]
+
+  # Organização de imports
+  - repo: https://github.com/pycqa/isort
+    rev: 5.13.2
+    hooks:
+      - id: isort
+        args: [--profile=black]
+
+  # Linting
+  - repo: https://github.com/pycqa/flake8
+    rev: 6.1.0
+    hooks:
+      - id: flake8
+        args: [--max-line-length=88, --extend-ignore=E203]
+
+  # Verificação de tipos
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.8.0
+    hooks:
+      - id: mypy
+        additional_dependencies: [types-requests, types-PyYAML]
+
+  # Segurança - Detecção de vulnerabilidades
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.5
+    hooks:
+      - id: bandit
+        args: [-r, ., -f, json, -o, bandit-report.json]
+        exclude: ^tests/
+
+  # Verificação de dependências vulneráveis
+  - repo: https://github.com/Lucas-C/pre-commit-hooks-safety
+    rev: v1.3.2
+    hooks:
+      - id: python-safety-dependencies-check
+
+  # Detecção de secrets
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: [--baseline, .secrets.baseline]
+
+  # Verificação de arquivos de configuração
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.5.0
+    hooks:
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: [--maxkb=1000]
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-docstring-first
+
+  # Verificação de segurança específica para FastAPI
+  - repo: local
+    hooks:
+      - id: security-check
+        name: Security Check
+        entry: python security_check.py
+        language: system
+        pass_filenames: false
+        always_run: true
+
+# Configurações globais
+default_stages: [commit, push]
+fail_fast: false
+
+# Configurações específicas
+ci:
+  autofix_commit_msg: |
+    [pre-commit.ci] auto fixes from pre-commit.com hooks
+
+    for more information, see https://pre-commit.ci
+  autofix_prs: true
+  autoupdate_branch: ''
+  autoupdate_commit_msg: '[pre-commit.ci] pre-commit autoupdate'
+  autoupdate_schedule: weekly
+  skip: []
+  submodules: false
