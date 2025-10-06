@@ -1,0 +1,61 @@
+service: projeto-vida-dados
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.9
+  region: us-east-1
+  memorySize: 512
+  timeout: 60
+  environment:
+    S3_BUCKET: ${param:s3Bucket, 'projeto-vida-prd'}
+    S3_KEY_PREFIX: ${param:s3KeyPrefix, 'dashboard_files'}
+    DB_SECRET_NAME: ${param:dbSecretName, 'projeto-vida/database'}
+    COGNITO_SECRET_NAME: ${param:cognitoSecretName, 'projeto-vida/cognito'}
+    AWS_REGION: ${param:awsRegion, 'us-east-1'}
+  iam:
+    role:
+      statements:
+        # Permissões para S3
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+          Resource: "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+        
+        # Permissões para Secrets Manager
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: 
+            - "arn:aws:secretsmanager:${self:provider.region}:*:secret:${self:provider.environment.DB_SECRET_NAME}*"
+            - "arn:aws:secretsmanager:${self:provider.region}:*:secret:${self:provider.environment.COGNITO_SECRET_NAME}*"
+        
+        # Permissões para CloudWatch Logs
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/*"
+
+functions:
+  api:
+    handler: main.handler
+    events:
+      - httpApi: '*'
+  
+  dashboard:
+    handler: lambda_dashboard.lambda_handler
+    events:
+      - schedule: rate(1 day)
+
+plugins:
+  - serverless-python-requirements
+
+custom:
+  pythonRequirements:
+    dockerizePip: false
+    zip: true
+    slim: true

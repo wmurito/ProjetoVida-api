@@ -1,0 +1,10 @@
+{
+  "s3Bucket": "projeto-vida-prd",
+  "s3KeyPrefix": "dashboard_files",
+  "dbSecretName": "projeto-vida/database",
+  "cognitoSecretName": "projeto-vida/cognito",
+  "awsRegion": "us-east-1",
+  "securityGroupId": "sg-default",
+  "subnetId1": "subnet-default1",
+  "subnetId2": "subnet-default2"
+}
