@@ -8,20 +8,24 @@ import os
 load_dotenv()
 
 # 🔗 Pegar a URL do banco
-DATABASE_URL = os.getenv("DATABASE_URL")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./projetovida_dev.db")
 
-# 🚨 Verificar se a variável foi carregada
-if not DATABASE_URL:
-    raise ValueError("DATABASE_URL não encontrada. Verifique seu arquivo .env")
-
-# 🔧 Criar engine com opções para AWS Lambda
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,  # Verifica conexão antes de usar
-    pool_recycle=3600,   # Recicla conexões após 1 hora
-    pool_size=5,         # Tamanho do pool de conexões
-    max_overflow=10      # Máximo de conexões extras
-)
+# 🔧 Criar engine com opções para AWS Lambda ou SQLite
+if DATABASE_URL.startswith("sqlite"):
+    # Configuração para SQLite (desenvolvimento)
+    engine = create_engine(
+        DATABASE_URL,
+        connect_args={"check_same_thread": False}
+    )
+else:
+    # Configuração para PostgreSQL (produção)
+    engine = create_engine(
+        DATABASE_URL,
+        pool_pre_ping=True,  # Verifica conexão antes de usar
+        pool_recycle=3600,   # Recicla conexões após 1 hora
+        pool_size=5,         # Tamanho do pool de conexões
+        max_overflow=10      # Máximo de conexões extras
+    )
 
 # 🏗️ Sessão
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

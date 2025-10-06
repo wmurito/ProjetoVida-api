@@ -1,47 +1,50 @@
-# Projeto Vida - Dashboard de Dados Oncológicos
+# ProjetoVida API
 
-API e dashboard para gerenciamento de dados de pacientes oncológicos.
+## Como rodar o backend
 
-## Estrutura do Projeto
-
-- `main.py`: API FastAPI principal
-- `lambda_dashboard.py`: Gerador de dashboard para AWS Lambda
-- `models.py`: Modelos SQLAlchemy
-- `schemas.py`: Schemas Pydantic
-- `crud.py`: Operações CRUD
-- `auth.py`: Autenticação e autorização
-- `database.py`: Configuração do banco de dados
-
-## Configuração
-
-1. Crie um arquivo `.env` baseado no `.env.example`
-2. Instale as dependências: `pip install -r requirements.txt`
-3. Execute localmente: `uvicorn main:app --reload`
-
-## Implantação no AWS Lambda
+### 1. Ativar ambiente virtual
 
 ```bash
-# Instalar o Serverless Framework
-npm install -g serverless
+# Windows
+.venv\Scripts\activate
 
-# Configurar credenciais AWS
-aws configure
-
-# Implantar
-serverless deploy
+# Linux/Mac
+source .venv/bin/activate
 ```
 
-## Segurança
+### 2. Instalar dependências
 
-- As credenciais AWS são gerenciadas por IAM roles
-- O banco de dados é acessado através de uma VPC
-- Autenticação via tokens JWT
+```bash
+pip install -r requirements.txt
+```
 
-## Custos Estimados
+### 3. Configurar variáveis de ambiente
 
-Para 50 pacientes mensais:
-- AWS Lambda: < $0.20/mês
-- AWS S3: < $0.01/mês
-- RDS PostgreSQL: ~$15-30/mês
+Edite o arquivo `.env` com suas credenciais reais.
 
-Total estimado: ~$15-30/mês
+### 4. Rodar o servidor
+
+```bash
+# Desenvolvimento (com reload automático)
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
+
+# Ou simplesmente
+python main.py
+```
+
+### 5. Acessar a API
+
+- API: http://localhost:8000
+- Documentação Swagger: http://localhost:8000/docs
+- Documentação ReDoc: http://localhost:8000/redoc
+
+## Comandos úteis
+
+```bash
+# Instalar nova dependência
+pip install nome-pacote
+pip freeze > requirements.txt
+
+# Verificar se está rodando
+curl http://localhost:8000
+```
