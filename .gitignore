@@ -311,6 +311,37 @@ uploads/
 temp/
 tmp/
 
+# Security scan results
+security_scan_*.json
+safety_scan_*.json
+bandit_*.json
+
+# Test files and reports
+test_*.py
+*_test.py
+test_*.js
+*_test.js
+test_*.json
+*_test.json
+
+# Documentation that shouldn't be in production
+*.md
+!README.md
+!CHANGELOG.md
+
+# Development and debugging files
+debug_*.py
+debug_*.js
+debug_*.json
+check_*.py
+check_*.js
+
+# Temporary security files
+security_*.py
+security_*.js
+upload_security_*.py
+test_upload_*.py
+
 # Arquivos de deploy sensíveis
 params.json
 !params.example.json
