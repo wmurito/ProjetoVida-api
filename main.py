@@ -3,6 +3,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 import crud, models, schemas
 from database import SessionLocal, engine
 import os
@@ -90,6 +91,27 @@ async def log_requests(request: Request, call_next):
 @app.get("/")
 def read_root():
     return {"message": "API de Formulário de Pacientes"}
+
+# Rota de teste para verificar se a API está funcionando
+@app.get("/test")
+def test_api():
+    try:
+        # Testar conexão com banco
+        db = SessionLocal()
+        result = db.execute(text("SELECT 1"))
+        db.close()
+        
+        return {
+            "status": "success",
+            "message": "API funcionando corretamente",
+            "database": "conectado",
+            "models": "atualizados"
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Erro na API: {str(e)}"
+        }
 
 # Rota de verificação de autenticação
 @app.get("/auth/me", response_model=Dict[str, Any])
