@@ -14,13 +14,13 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 # Obter configurações do Cognito
-AWS_REGION = os.environ.get("AWS_REGION")
+REGION = os.environ.get("AWS_DEFAULT_REGION", "us-east-1")
 COGNITO_USER_POOL_ID = os.environ.get("COGNITO_USER_POOL_ID")
 COGNITO_APP_CLIENT_ID = os.environ.get("COGNITO_APP_CLIENT_ID")
 COGNITO_SECRET_NAME = os.environ.get("COGNITO_SECRET_NAME", "projeto-vida/cognito")
 
 # URL para obter as chaves públicas
-keys_url = f"https://cognito-idp.{AWS_REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
+keys_url = f"https://cognito-idp.{REGION}.amazonaws.com/{COGNITO_USER_POOL_ID}/.well-known/jwks.json"
 
 oauth2_scheme = HTTPBearer(auto_error=False)
 
@@ -34,7 +34,7 @@ def get_cognito_config():
                 response = secretsmanager_client.get_secret_value(SecretId=COGNITO_SECRET_NAME)
                 secret = json.loads(response['SecretString'])
                 return {
-                    'region': secret.get('region', AWS_REGION),
+                    'region': secret.get('region', REGION),
                     'user_pool_id': secret.get('user_pool_id', COGNITO_USER_POOL_ID),
                     'app_client_id': secret.get('app_client_id', COGNITO_APP_CLIENT_ID)
                 }
@@ -47,7 +47,7 @@ def get_cognito_config():
     
     # Usar variáveis de ambiente
     return {
-        'region': AWS_REGION,
+        'region': REGION,
         'user_pool_id': COGNITO_USER_POOL_ID,
         'app_client_id': COGNITO_APP_CLIENT_ID
     }

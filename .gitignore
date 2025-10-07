@@ -176,8 +176,9 @@ debug_*.js
 debug_*.json
 check_*.py
 check_*.js
-security_*.py
-security_*.js
+security_tests.py
+security_check.py
+security_fixes.py
 upload_security_*.py
 test_upload_*.py
 
@@ -306,6 +307,20 @@ $RECYCLE.BIN/
 !LICENSE
 !LICENSE.txt
 
+# Arquivos de análise e revisão
+CODE_REVIEW_*.md
+CORRECOES_*.md
+QRCODE_*.md
+SECURITY_*.md
+DEPLOY_*.md
+WORKFLOWS_*.md
+*_ANALYSIS.md
+*_REPORT.md
+*_SUMMARY.md
+*_GUIDE.md
+*_FIXES*.md
+*_CHECKLIST.md
+
 # Jupyter Notebooks
 .ipynb_checkpoints
 *.ipynb
@@ -389,6 +404,8 @@ staging_*
 # Arquivos de deploy específicos
 deploy_*
 deployment_*
+DEPLOY*.md
+!DEPLOY.md
 
 # =============================================================================
 # ⚠️ IMPORTANTE: NUNCA REMOVER ESTAS REGRAS!

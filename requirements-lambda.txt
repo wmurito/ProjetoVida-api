@@ -1,0 +1,29 @@
+# Core FastAPI
+fastapi>=0.104.0
+mangum>=0.17.0
+
+# Database
+sqlalchemy>=2.0.0
+psycopg2-binary>=2.9.6
+
+# Validation
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Security
+python-jose[cryptography]>=3.3.0
+passlib[bcrypt]>=1.7.4
+slowapi>=0.1.9
+
+# AWS (boto3 já vem no Lambda)
+aws-lambda-powertools>=2.15.0
+
+# Environment
+python-dotenv>=1.0.0
+
+# HTTP
+requests>=2.31.0
+
+# Data Processing
+pandas>=2.2.3
+openpyxl>=3.1.0
