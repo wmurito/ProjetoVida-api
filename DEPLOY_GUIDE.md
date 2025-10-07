@@ -1,129 +1,109 @@
-# Guia de Deploy Seguro para AWS Lambda
+# 🚀 Guia de Deploy para AWS Lambda
 
-Este guia explica como fazer o deploy seguro da aplicação para AWS Lambda usando o Serverless Framework.
+## 📋 Pré-requisitos
 
-## 1. Preparação do Ambiente AWS
-
-### 1.1 Criar segredos no AWS Secrets Manager
-
+### 1. Instalar dependências
 ```bash
-# Criar segredo para as credenciais do banco de dados
-aws secretsmanager create-secret \
-    --name projeto-vida/database \
-    --description "Credenciais do banco de dados do Projeto Vida" \
-    --secret-string '{"username":"<DB_USER>","password":"<DB_PASSWORD>","host":"<DB_HOST>.rds.amazonaws.com","port":"5432","dbname":"<DB_NAME>"}'
-
-# Criar segredo para as configurações do Cognito
-aws secretsmanager create-secret \
-    --name projeto-vida/cognito \
-    --description "Configurações do Cognito para o Projeto Vida" \
-    --secret-string '{"region":"<AWS_REGION>","user_pool_id":"<USER_POOL_ID>","app_client_id":"<APP_CLIENT_ID>"}'
-```
-
-### 1.2 Criar um bucket S3 (se ainda não existir)
-
-```bash
-# Criar um bucket S3 para armazenar os dados do dashboard
-# IMPORTANTE: Use um nome único e específico para seu projeto
-aws s3 mb s3://<SEU-BUCKET-UNICO>
-```
-
-### 1.3 Configurar VPC (opcional, mas recomendado)
-
-Se seu banco de dados estiver em uma VPC privada, você precisará criar:
-- Security Group para o Lambda
-- Subnets privadas com acesso ao RDS
-- Endpoint VPC para S3 (para evitar custos de NAT Gateway)
-
-## 2. Deploy com Serverless Framework
-
-### 2.1 Instalar dependências
-
-```bash
-# Instalar Serverless Framework
+# Node.js e npm
 npm install -g serverless
 
-# Instalar plugin de requisitos Python
-npm install --save-dev serverless-python-requirements
+# Python
+pip install -r requirements.txt
 ```
 
-### 2.2 Configurar parâmetros para deploy
-
+### 2. Configurar AWS CLI
 ```bash
-# Copiar o template e editar com seus valores reais
-cp params.example.json params.json
-# Editar params.json com suas configurações AWS
+aws configure
+# Insira suas credenciais AWS
 ```
 
-### 2.3 Fazer o deploy
+### 3. Configurar parâmetros
+Edite o arquivo `params.json` com suas configurações:
+```json
+{
+  "s3Bucket": "seu-bucket-s3",
+  "s3KeyPrefix": "dashboard_files",
+  "dbSecretName": "projeto-vida/database",
+  "cognitoSecretName": "projeto-vida/cognito",
+  "awsRegion": "us-east-1"
+}
+```
 
+## 🚀 Deploy Rápido
+
+### Windows (PowerShell)
+```powershell
+.\deploy.ps1
+```
+
+### Linux/Mac (Bash)
 ```bash
-# Deploy usando os parâmetros
-serverless deploy --param-file params.json
+chmod +x deploy.sh
+./deploy.sh
 ```
 
-## 3. Verificação Pós-Deploy
-
-### 3.1 Testar a função Lambda
-
+### Deploy Manual
 ```bash
-# Invocar a função dashboard manualmente
-serverless invoke -f dashboard
+serverless deploy --config serverless-prod.yml --stage prod
 ```
 
-### 3.2 Verificar logs
+## 📁 Arquivos Excluídos do Deploy
 
+O deploy **NÃO inclui** os seguintes arquivos:
+- ✅ Documentação (*.md)
+- ✅ Arquivos de teste
+- ✅ Arquivos de debug
+- ✅ Configurações de desenvolvimento
+- ✅ Arquivos de cache
+- ✅ Logs
+- ✅ Arquivos temporários
+
+## 🔧 Configurações de Produção
+
+### Memória e Timeout
+- **Memória**: 1024MB
+- **Timeout**: 30 segundos
+- **Runtime**: Python 3.11
+
+### Otimizações
+- ✅ Concorrência provisionada: 2 instâncias
+- ✅ Compressão de dependências
+- ✅ Exclusão de arquivos desnecessários
+- ✅ Configuração otimizada para produção
+
+## 📊 Monitoramento
+
+Após o deploy, monitore:
+- CloudWatch Logs
+- Métricas de performance
+- Erros e exceções
+- Uso de memória
+
+## 🔗 Endpoints
+
+Após o deploy, você terá:
+- **API Principal**: `https://[seu-dominio]/`
+- **Teste**: `https://[seu-dominio]/test`
+- **Health Check**: `https://[seu-dominio]/health`
+
+## 🛠️ Troubleshooting
+
+### Erro de permissões
 ```bash
-# Ver logs da função dashboard
-serverless logs -f dashboard
+aws sts get-caller-identity
 ```
 
-### 3.3 Verificar arquivos no S3
-
+### Erro de dependências
 ```bash
-# Listar arquivos gerados no S3
-aws s3 ls s3://<SEU-BUCKET>/dashboard_files/ --recursive
+pip install -r requirements.txt
 ```
 
-## 4. Manutenção e Atualizações
+### Erro de configuração
+Verifique o arquivo `params.json`
 
-### 4.1 Atualizar código
+## 📞 Suporte
 
-Após modificar o código:
-
-```bash
-# Atualizar apenas a função dashboard
-serverless deploy function -f dashboard
-```
-
-### 4.2 Atualizar configurações
-
-Para alterar configurações como agendamento ou memória:
-
-```bash
-# Edite serverless.yml e faça o deploy novamente
-serverless deploy --param-file params.json
-```
-
-## 5. Segurança
-
-### 5.1 Rotação de credenciais
-
-Configure rotação automática de credenciais no AWS Secrets Manager.
-
-### 5.2 Monitoramento
-
-Configure alarmes no CloudWatch para erros nas funções Lambda.
-
-### 5.3 Auditoria
-
-Ative AWS CloudTrail para auditar acessos aos recursos.
-
-## 6. Remoção (se necessário)
-
-```bash
-# Remover toda a infraestrutura
-serverless remove
-```
-
-**IMPORTANTE**: Esta ação remove todas as funções Lambda, mas não remove dados do S3 ou segredos do Secrets Manager.
+Em caso de problemas:
+1. Verifique os logs no CloudWatch
+2. Confirme as configurações AWS
+3. Teste localmente primeiro

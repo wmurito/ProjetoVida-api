@@ -9,17 +9,14 @@ import datetime
 def create_or_update_related_data(db: Session, paciente: schemas.PacienteCreate, paciente_id: int):
     # História Patológica
     if paciente.historia_patologica:
-        # Verificar se já existe
         existing = db.query(models.HistoriaPatologica).filter(
             models.HistoriaPatologica.paciente_id == paciente_id
         ).first()
         
         if existing:
-            # Atualizar
             for key, value in paciente.historia_patologica.dict().items():
                 setattr(existing, key, value)
         else:
-            # Criar novo
             db_historia_patologica = models.HistoriaPatologica(
                 **paciente.historia_patologica.dict(),
                 paciente_id=paciente_id
@@ -41,6 +38,19 @@ def create_or_update_related_data(db: Session, paciente: schemas.PacienteCreate,
                 paciente_id=paciente_id
             )
             db.add(db_historia_familiar)
+    
+    # Familiares (lista)
+    if paciente.familiares:
+        # Remover familiares existentes
+        db.query(models.Familiar).filter(models.Familiar.paciente_id == paciente_id).delete()
+        
+        # Adicionar novos familiares
+        for familiar_data in paciente.familiares:
+            db_familiar = models.Familiar(
+                **familiar_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_familiar)
     
     # Hábitos de Vida
     if paciente.habitos_vida:
@@ -90,37 +100,131 @@ def create_or_update_related_data(db: Session, paciente: schemas.PacienteCreate,
             )
             db.add(db_historia_doenca)
     
-    # Histologia
-    if paciente.histologia:
-        existing = db.query(models.Histologia).filter(
-            models.Histologia.paciente_id == paciente_id
+    # Modelos Preditores
+    if paciente.modelos_preditores:
+        existing = db.query(models.ModelosPreditores).filter(
+            models.ModelosPreditores.paciente_id == paciente_id
         ).first()
         
         if existing:
-            for key, value in paciente.histologia.dict().items():
+            for key, value in paciente.modelos_preditores.dict().items():
                 setattr(existing, key, value)
         else:
-            db_histologia = models.Histologia(
-                **paciente.histologia.dict(),
+            db_modelos_preditores = models.ModelosPreditores(
+                **paciente.modelos_preditores.dict(),
                 paciente_id=paciente_id
             )
-            db.add(db_histologia)
+            db.add(db_modelos_preditores)
     
-    # Tratamento
-    if paciente.tratamento:
-        existing = db.query(models.Tratamento).filter(
-            models.Tratamento.paciente_id == paciente_id
-        ).first()
-        
-        if existing:
-            for key, value in paciente.tratamento.dict().items():
-                setattr(existing, key, value)
-        else:
-            db_tratamento = models.Tratamento(
-                **paciente.tratamento.dict(),
+    # Cirurgias Mama (lista)
+    if paciente.cirurgias_mama:
+        db.query(models.CirurgiaMama).filter(models.CirurgiaMama.paciente_id == paciente_id).delete()
+        for cirurgia_data in paciente.cirurgias_mama:
+            db_cirurgia = models.CirurgiaMama(
+                **cirurgia_data.dict(),
                 paciente_id=paciente_id
             )
-            db.add(db_tratamento)
+            db.add(db_cirurgia)
+    
+    # Cirurgias Axila (lista)
+    if paciente.cirurgias_axila:
+        db.query(models.CirurgiaAxila).filter(models.CirurgiaAxila.paciente_id == paciente_id).delete()
+        for cirurgia_data in paciente.cirurgias_axila:
+            db_cirurgia = models.CirurgiaAxila(
+                **cirurgia_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_cirurgia)
+    
+    # Reconstruções (lista)
+    if paciente.reconstrucoes:
+        db.query(models.Reconstrucao).filter(models.Reconstrucao.paciente_id == paciente_id).delete()
+        for reconstrucao_data in paciente.reconstrucoes:
+            db_reconstrucao = models.Reconstrucao(
+                **reconstrucao_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_reconstrucao)
+    
+    # Quimioterapias (lista)
+    if paciente.quimioterapias:
+        db.query(models.Quimioterapia).filter(models.Quimioterapia.paciente_id == paciente_id).delete()
+        for quimio_data in paciente.quimioterapias:
+            db_quimio = models.Quimioterapia(
+                **quimio_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_quimio)
+    
+    # Radioterapias (lista)
+    if paciente.radioterapias:
+        db.query(models.Radioterapia).filter(models.Radioterapia.paciente_id == paciente_id).delete()
+        for radio_data in paciente.radioterapias:
+            db_radio = models.Radioterapia(
+                **radio_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_radio)
+    
+    # Endocrinoterapias (lista)
+    if paciente.endocrinoterapias:
+        db.query(models.Endocrinoterapia).filter(models.Endocrinoterapia.paciente_id == paciente_id).delete()
+        for endo_data in paciente.endocrinoterapias:
+            db_endo = models.Endocrinoterapia(
+                **endo_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_endo)
+    
+    # Imunoterapias (lista)
+    if paciente.imunoterapias:
+        db.query(models.Imunoterapia).filter(models.Imunoterapia.paciente_id == paciente_id).delete()
+        for imuno_data in paciente.imunoterapias:
+            db_imuno = models.Imunoterapia(
+                **imuno_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_imuno)
+    
+    # Imunohistoquímicas (lista)
+    if paciente.imunohistoquimicas:
+        db.query(models.Imunohistoquimica).filter(models.Imunohistoquimica.paciente_id == paciente_id).delete()
+        for imuno_data in paciente.imunohistoquimicas:
+            db_imuno = models.Imunohistoquimica(
+                **imuno_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_imuno)
+    
+    # Core Biopsies (lista)
+    if paciente.core_biopsies:
+        db.query(models.CoreBiopsy).filter(models.CoreBiopsy.paciente_id == paciente_id).delete()
+        for biopsy_data in paciente.core_biopsies:
+            db_biopsy = models.CoreBiopsy(
+                **biopsy_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_biopsy)
+    
+    # Mamotomias (lista)
+    if paciente.mamotomias:
+        db.query(models.Mamotomia).filter(models.Mamotomia.paciente_id == paciente_id).delete()
+        for mamotomia_data in paciente.mamotomias:
+            db_mamotomia = models.Mamotomia(
+                **mamotomia_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_mamotomia)
+    
+    # PAAFs (lista)
+    if paciente.paafs:
+        db.query(models.Paaf).filter(models.Paaf.paciente_id == paciente_id).delete()
+        for paaf_data in paciente.paafs:
+            db_paaf = models.Paaf(
+                **paaf_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_paaf)
     
     # Desfecho
     if paciente.desfecho:
@@ -138,6 +242,16 @@ def create_or_update_related_data(db: Session, paciente: schemas.PacienteCreate,
             )
             db.add(db_desfecho)
     
+    # Metástases (lista)
+    if paciente.metastases:
+        db.query(models.Metastase).filter(models.Metastase.paciente_id == paciente_id).delete()
+        for metastase_data in paciente.metastases:
+            db_metastase = models.Metastase(
+                **metastase_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_metastase)
+    
     # Tempos Diagnóstico
     if paciente.tempos_diagnostico:
         existing = db.query(models.TemposDiagnostico).filter(
@@ -154,15 +268,28 @@ def create_or_update_related_data(db: Session, paciente: schemas.PacienteCreate,
             )
             db.add(db_tempos_diagnostico)
     
+    # Eventos (lista)
+    if paciente.eventos:
+        db.query(models.Evento).filter(models.Evento.paciente_id == paciente_id).delete()
+        for evento_data in paciente.eventos:
+            db_evento = models.Evento(
+                **evento_data.dict(),
+                paciente_id=paciente_id
+            )
+            db.add(db_evento)
+    
     db.commit()
 
 
 # ✅ Função para criar paciente e dados relacionados
 def create_paciente(db: Session, paciente: schemas.PacienteCreate):
     db_paciente = models.Paciente(**paciente.dict(exclude={
-        "historia_patologica", "historia_familiar", "habitos_vida",
-        "paridade", "historia_doenca", "histologia", "tratamento",
-        "desfecho", "tempos_diagnostico"
+        "historia_patologica", "historia_familiar", "familiares", "habitos_vida",
+        "paridade", "historia_doenca", "modelos_preditores",
+        "cirurgias_mama", "cirurgias_axila", "reconstrucoes",
+        "quimioterapias", "radioterapias", "endocrinoterapias", "imunoterapias",
+        "imunohistoquimicas", "core_biopsies", "mamotomias", "paafs",
+        "desfecho", "metastases", "tempos_diagnostico", "eventos"
     }))
 
     db.add(db_paciente)
@@ -185,32 +312,128 @@ def get_pacientes(db: Session, skip: int = 0, limit: int = 100):
     return db.query(models.Paciente).offset(skip).limit(limit).all()
 
 def get_paciente_detalhes(db: Session, paciente_id: int):
-    query = text("""
-        SELECT 
-            p.*,
-            hp.*,
-            hf.*,
-            hv.*,
-            pa.*,
-            hda.*,
-            hi.*,
-            t.*,
-            d.*,
-            td.*
-        FROM 
-            masto.paciente p
-        LEFT JOIN masto.historia_patologica hp ON hp.paciente_id = p.paciente_id
-        LEFT JOIN masto.historia_familiar hf ON hf.paciente_id = p.paciente_id
-        LEFT JOIN masto.habitos_de_vida hv ON hv.paciente_id = p.paciente_id
-        LEFT JOIN masto.paridade pa ON pa.paciente_id = p.paciente_id
-        LEFT JOIN masto.historia_doenca_atual hda ON hda.paciente_id = p.paciente_id
-        LEFT JOIN masto.histologia hi ON hi.paciente_id = p.paciente_id
-        LEFT JOIN masto.tratamento t ON t.paciente_id = p.paciente_id
-        LEFT JOIN masto.desfecho d ON d.paciente_id = p.paciente_id
-        LEFT JOIN masto.tempos_diagnostico td ON td.paciente_id = p.paciente_id
-        WHERE p.paciente_id = :paciente_id
-    """)
-    result = db.execute(query, {"paciente_id": paciente_id}).mappings().first()
+    # Buscar paciente com todos os relacionamentos usando SQLAlchemy ORM
+    paciente = db.query(models.Paciente).filter(models.Paciente.paciente_id == paciente_id).first()
+    if not paciente:
+        return None
+    
+    # Buscar todos os dados relacionados
+    historia_patologica = db.query(models.HistoriaPatologica).filter(
+        models.HistoriaPatologica.paciente_id == paciente_id
+    ).first()
+    
+    historia_familiar = db.query(models.HistoriaFamiliar).filter(
+        models.HistoriaFamiliar.paciente_id == paciente_id
+    ).first()
+    
+    familiares = db.query(models.Familiar).filter(
+        models.Familiar.paciente_id == paciente_id
+    ).all()
+    
+    habitos_vida = db.query(models.HabitosDeVida).filter(
+        models.HabitosDeVida.paciente_id == paciente_id
+    ).first()
+    
+    paridade = db.query(models.Paridade).filter(
+        models.Paridade.paciente_id == paciente_id
+    ).first()
+    
+    historia_doenca = db.query(models.HistoriaDoencaAtual).filter(
+        models.HistoriaDoencaAtual.paciente_id == paciente_id
+    ).first()
+    
+    modelos_preditores = db.query(models.ModelosPreditores).filter(
+        models.ModelosPreditores.paciente_id == paciente_id
+    ).first()
+    
+    # Tratamento - listas
+    cirurgias_mama = db.query(models.CirurgiaMama).filter(
+        models.CirurgiaMama.paciente_id == paciente_id
+    ).all()
+    
+    cirurgias_axila = db.query(models.CirurgiaAxila).filter(
+        models.CirurgiaAxila.paciente_id == paciente_id
+    ).all()
+    
+    reconstrucoes = db.query(models.Reconstrucao).filter(
+        models.Reconstrucao.paciente_id == paciente_id
+    ).all()
+    
+    quimioterapias = db.query(models.Quimioterapia).filter(
+        models.Quimioterapia.paciente_id == paciente_id
+    ).all()
+    
+    radioterapias = db.query(models.Radioterapia).filter(
+        models.Radioterapia.paciente_id == paciente_id
+    ).all()
+    
+    endocrinoterapias = db.query(models.Endocrinoterapia).filter(
+        models.Endocrinoterapia.paciente_id == paciente_id
+    ).all()
+    
+    imunoterapias = db.query(models.Imunoterapia).filter(
+        models.Imunoterapia.paciente_id == paciente_id
+    ).all()
+    
+    imunohistoquimicas = db.query(models.Imunohistoquimica).filter(
+        models.Imunohistoquimica.paciente_id == paciente_id
+    ).all()
+    
+    core_biopsies = db.query(models.CoreBiopsy).filter(
+        models.CoreBiopsy.paciente_id == paciente_id
+    ).all()
+    
+    mamotomias = db.query(models.Mamotomia).filter(
+        models.Mamotomia.paciente_id == paciente_id
+    ).all()
+    
+    paafs = db.query(models.Paaf).filter(
+        models.Paaf.paciente_id == paciente_id
+    ).all()
+    
+    desfecho = db.query(models.Desfecho).filter(
+        models.Desfecho.paciente_id == paciente_id
+    ).first()
+    
+    metastases = db.query(models.Metastase).filter(
+        models.Metastase.paciente_id == paciente_id
+    ).all()
+    
+    tempos_diagnostico = db.query(models.TemposDiagnostico).filter(
+        models.TemposDiagnostico.paciente_id == paciente_id
+    ).first()
+    
+    eventos = db.query(models.Evento).filter(
+        models.Evento.paciente_id == paciente_id
+    ).all()
+    
+    # Montar resultado
+    result = {
+        "paciente": paciente,
+        "historia_patologica": historia_patologica,
+        "historia_familiar": historia_familiar,
+        "familiares": familiares,
+        "habitos_vida": habitos_vida,
+        "paridade": paridade,
+        "historia_doenca": historia_doenca,
+        "modelos_preditores": modelos_preditores,
+        "cirurgias_mama": cirurgias_mama,
+        "cirurgias_axila": cirurgias_axila,
+        "reconstrucoes": reconstrucoes,
+        "quimioterapias": quimioterapias,
+        "radioterapias": radioterapias,
+        "endocrinoterapias": endocrinoterapias,
+        "imunoterapias": imunoterapias,
+        "imunohistoquimicas": imunohistoquimicas,
+        "core_biopsies": core_biopsies,
+        "mamotomias": mamotomias,
+        "paafs": paafs,
+        "desfecho": desfecho,
+        "metastases": metastases,
+        "tempos_diagnostico": tempos_diagnostico,
+        "eventos": eventos
+    }
+    
     return result
 
 # ✅ Atualizar paciente + histórico
@@ -222,9 +445,12 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
     save_paciente_historico(db, db_paciente)
 
     for key, value in paciente.dict(exclude={
-        "historia_patologica", "historia_familiar", "habitos_vida",
-        "paridade", "historia_doenca", "histologia", "tratamento",
-        "desfecho", "tempos_diagnostico"
+        "historia_patologica", "historia_familiar", "familiares", "habitos_vida",
+        "paridade", "historia_doenca", "modelos_preditores",
+        "cirurgias_mama", "cirurgias_axila", "reconstrucoes",
+        "quimioterapias", "radioterapias", "endocrinoterapias", "imunoterapias",
+        "imunohistoquimicas", "core_biopsies", "mamotomias", "paafs",
+        "desfecho", "metastases", "tempos_diagnostico", "eventos"
     }).items():
         setattr(db_paciente, key, value)
 
