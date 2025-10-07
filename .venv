@@ -1,0 +1,11 @@
+# Configurações do banco de dados
+DATABASE_URL=postgresql://usuario:senha@host:porta/banco
+
+# Configurações do S3
+S3_BUCKET=nome-do-seu-bucket
+S3_KEY_PREFIX=dashboard_data
+
+# Configurações de VPC para Lambda
+SECURITY_GROUP_ID=sg-xxxxxxxxxxxxxxxxx
+SUBNET_ID_1=subnet-xxxxxxxxxxxxxxxxx
+SUBNET_ID_2=subnet-xxxxxxxxxxxxxxxxx
