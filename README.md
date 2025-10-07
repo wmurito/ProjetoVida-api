@@ -1,50 +1,59 @@
 # ProjetoVida API
 
-## Como rodar o backend
+API backend para o sistema ProjetoVida, desenvolvida com FastAPI e AWS Lambda.
 
-### 1. Ativar ambiente virtual
+## Tecnologias
 
-```bash
-# Windows
-.venv\Scripts\activate
+- **FastAPI** - Framework web
+- **SQLAlchemy** - ORM
+- **PostgreSQL** - Banco de dados
+- **AWS Lambda** - Serverless
+- **AWS Cognito** - Autenticação
+- **AWS S3** - Armazenamento
 
-# Linux/Mac
-source .venv/bin/activate
+## Estrutura
+
+```
+├── main.py              # API principal
+├── auth.py              # Autenticação
+├── models.py            # Modelos do banco
+├── schemas.py           # Schemas Pydantic
+├── crud.py              # Operações CRUD
+├── database.py          # Configuração do banco
+├── s3_service.py        # Serviços S3
+├── lambda_dashboard.py  # Lambda dashboard
+└── serverless.yml       # Configuração deploy
 ```
 
-### 2. Instalar dependências
+## Deploy
 
 ```bash
+# Instalar dependências
+npm install
+
+# Deploy para AWS
+serverless deploy
+```
+
+## Desenvolvimento Local
+
+```bash
+# Ativar ambiente virtual
+.venv\Scripts\activate  # Windows
+source .venv/bin/activate  # Linux/Mac
+
+# Instalar dependências
 pip install -r requirements.txt
-```
 
-### 3. Configurar variáveis de ambiente
-
-Edite o arquivo `.env` com suas credenciais reais.
-
-### 4. Rodar o servidor
-
-```bash
-# Desenvolvimento (com reload automático)
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-# Ou simplesmente
+# Rodar servidor
 python main.py
 ```
 
-### 5. Acessar a API
+## Documentação
 
-- API: http://localhost:8000
-- Documentação Swagger: http://localhost:8000/docs
-- Documentação ReDoc: http://localhost:8000/redoc
+- API: http://localhost:8000/docs
+- Deploy: Consulte documentação interna
 
-## Comandos úteis
+## Licença
 
-```bash
-# Instalar nova dependência
-pip install nome-pacote
-pip freeze > requirements.txt
-
-# Verificar se está rodando
-curl http://localhost:8000
-```
+Proprietary - Todos os direitos reservados
