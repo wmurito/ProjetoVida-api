@@ -3,12 +3,33 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 import os
+import json
+import boto3
+from botocore.exceptions import ClientError
 
 # 🔥 Carregar variáveis do .env
 load_dotenv()
 
+def get_database_url():
+    """Obtém URL do banco de dados do Secrets Manager ou .env"""
+    # Se estiver no Lambda, buscar do Secrets Manager
+    if os.environ.get("AWS_LAMBDA_FUNCTION_NAME"):
+        secret_name = os.environ.get("DB_SECRET_NAME", "projeto-vida/database")
+        try:
+            client = boto3.client('secretsmanager')
+            response = client.get_secret_value(SecretId=secret_name)
+            secret = json.loads(response['SecretString'])
+            
+            # Construir URL do PostgreSQL
+            return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret['port']}/{secret['dbname']}"
+        except ClientError as e:
+            raise Exception(f"Erro ao obter credenciais do banco: {str(e)}")
+    
+    # Desenvolvimento local: usar .env
+    return os.getenv("DATABASE_URL", "sqlite:///./projetovida_dev.db")
+
 # 🔗 Pegar a URL do banco
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./projetovida_dev.db")
+DATABASE_URL = get_database_url()
 
 # 🔧 Criar engine com opções para AWS Lambda ou SQLite
 if DATABASE_URL.startswith("sqlite"):
