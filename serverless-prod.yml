@@ -7,13 +7,12 @@ provider:
   runtime: python3.11
   region: us-east-1
   memorySize: 1024
-  timeout: 30
+  timeout: 29
   environment:
     S3_BUCKET: ${param:s3Bucket, 'projeto-vida-prd'}
     S3_KEY_PREFIX: ${param:s3KeyPrefix, 'dashboard_files'}
     DB_SECRET_NAME: ${param:dbSecretName, 'projeto-vida/database'}
     COGNITO_SECRET_NAME: ${param:cognitoSecretName, 'projeto-vida/cognito'}
-    AWS_REGION: ${param:awsRegion, 'us-east-1'}
     STAGE: ${opt:stage, 'prod'}
   iam:
     role:
@@ -53,20 +52,22 @@ functions:
       - httpApi:
           path: /
           method: ANY
-  
-  dashboard:
-    handler: lambda_dashboard.lambda_handler
-    events:
-      - schedule: rate(1 day)
 
 plugins:
   - serverless-python-requirements
 
 custom:
   pythonRequirements:
-    dockerizePip: false
+    dockerizePip: true
     zip: true
     slim: true
+    fileName: requirements-lambda-minimal.txt
+    pipCmdExtraArgs:
+      - --platform linux_x86_64
+      - --implementation cp
+      - --python-version 3.11
+      - --only-binary=:all:
+      - --upgrade
     slimPatterns:
       - "**/*.pyc"
       - "**/__pycache__"
@@ -93,3 +94,15 @@ custom:
       - "**/SECURITY_*.md"
       - "**/WORKFLOWS_*.md"
       - "**/SECRETS_*.md"
+      - "**/node_modules/**"
+      - "**/venv/**"
+      - "**/.venv*/**"
+      - "**/exportar.py"
+      - "**/dashboard.py"
+      - "**/lambda_dashboard.py"
+      - "**/s3_service.py"
+      - "**/auth.py"
+      - "**/database_dev.py"
+      - "**/requirements-lambda.txt"
+      - "**/package.json"
+      - "**/package-lock.json"

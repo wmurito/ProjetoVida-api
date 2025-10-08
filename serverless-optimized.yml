@@ -1,0 +1,237 @@
+service: projeto-vida-api
+
+frameworkVersion: '4'
+
+provider:
+  name: aws
+  runtime: python3.11
+  region: us-east-1
+  
+  # Otimizado para baixo custo e performance
+  memorySize: 512  # Reduzido de 1024 para economizar
+  timeout: 15      # Reduzido de 29 para economizar
+  stage: ${opt:stage, 'prod'}
+  
+  # Configurações de custo otimizadas
+  deploymentBucket:
+    name: projeto-vida-deployments-${self:provider.stage}
+    blockPublicAccess: true
+    versioning: true
+  
+  environment:
+    # Configurações essenciais
+    S3_BUCKET: ${param:s3Bucket, 'projeto-vida-${self:provider.stage}'}
+    S3_KEY_PREFIX: ${param:s3KeyPrefix, 'uploads'}
+    DB_SECRET_NAME: ${param:dbSecretName, 'projeto-vida/database'}
+    COGNITO_SECRET_NAME: ${param:cognitoSecretName, 'projeto-vida/cognito'}
+    STAGE: ${self:provider.stage}
+    
+    # Configurações de performance
+    PYTHONPATH: /var/task
+    PYTHONUNBUFFERED: 1
+    
+    # Configurações de segurança
+    CORS_ORIGINS: ${param:corsOrigins, 'https://your-frontend-domain.com'}
+    RATE_LIMIT_PER_MINUTE: 60
+  
+  # IAM Role otimizada (princípio do menor privilégio)
+  iam:
+    role:
+      statements:
+        # S3 - Apenas operações necessárias
+        - Effect: Allow
+          Action:
+            - s3:PutObject
+            - s3:GetObject
+            - s3:DeleteObject
+          Resource: "arn:aws:s3:::${self:provider.environment.S3_BUCKET}/*"
+        
+        # Secrets Manager - Apenas leitura
+        - Effect: Allow
+          Action:
+            - secretsmanager:GetSecretValue
+          Resource: 
+            - "arn:aws:secretsmanager:${self:provider.region}:*:secret:${self:provider.environment.DB_SECRET_NAME}*"
+            - "arn:aws:secretsmanager:${self:provider.region}:*:secret:${self:provider.environment.COGNITO_SECRET_NAME}*"
+        
+        # CloudWatch Logs - Apenas logs essenciais
+        - Effect: Allow
+          Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+          Resource: "arn:aws:logs:${self:provider.region}:*:log-group:/aws/lambda/*"
+
+functions:
+  # Função principal da API
+  api:
+    handler: main.handler
+    description: "API principal para cadastro de pacientes e dashboard"
+    
+    # Configurações otimizadas para baixo custo
+    reservedConcurrency: 5  # Limita concorrência para economizar
+    
+    # Configurações de performance
+    provisionedConcurrency: 0  # Removido para economizar (cold start aceitável para 50 pacientes/mês)
+    
+    events:
+      - httpApi: 
+          path: /{proxy+}
+          method: ANY
+          cors:
+            origin: ${self:provider.environment.CORS_ORIGINS}
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+            allowCredentials: true
+      - httpApi:
+          path: /
+          method: ANY
+          cors:
+            origin: ${self:provider.environment.CORS_ORIGINS}
+            headers:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+            allowCredentials: true
+
+plugins:
+  - serverless-python-requirements
+
+# Configurações de empacotamento otimizadas
+package:
+  individually: false
+  patterns:
+    # Incluir apenas arquivos essenciais
+    - 'main.py'
+    - 'crud.py'
+    - 'models.py'
+    - 'schemas.py'
+    - 'database.py'
+    - 'auth.py'
+    - 's3_service.py'
+    - 'exportar.py'
+    - 'dashboard.py'
+    - 'requirements-lambda-optimized.txt'
+    
+    # Excluir tudo que não é necessário
+    - '!**/*.md'
+    - '!**/test_*'
+    - '!**/*_test.py'
+    - '!**/tests/**'
+    - '!**/__pycache__/**'
+    - '!**/*.pyc'
+    - '!**/.git/**'
+    - '!**/node_modules/**'
+    - '!**/.venv*/**'
+    - '!**/venv/**'
+    - '!**/.pytest_cache/**'
+    - '!**/security_*'
+    - '!**/upload_security_*'
+    - '!**/check_*'
+    - '!**/debug_*'
+    - '!**/migrate_*'
+    - '!**/lambda_dashboard.py'
+    - '!**/database_dev.py'
+    - '!**/requirements.txt'
+    - '!**/requirements-lambda.txt'
+    - '!**/requirements-lambda-minimal.txt'
+    - '!**/package.json'
+    - '!**/package-lock.json'
+    - '!**/.github/**'
+    - '!**/.pre-commit-config.yaml'
+    - '!**/.serverlessignore'
+    - '!**/deploy*.ps1'
+    - '!**/deploy*.sh'
+    - '!**/env.*'
+    - '!**/params.example.json'
+
+custom:
+  pythonRequirements:
+    # Configurações otimizadas para Lambda
+    dockerizePip: true
+    zip: true
+    slim: true
+    fileName: requirements-lambda-optimized.txt
+    
+    # Compilação otimizada para Lambda
+    pipCmdExtraArgs:
+      - --platform linux_x86_64
+      - --implementation cp
+      - --python-version 3.11
+      - --only-binary=:all:
+      - --upgrade
+      - --no-deps  # Evita dependências desnecessárias
+    
+    # Padrões de exclusão otimizados
+    slimPatterns:
+      - "**/*.pyc"
+      - "**/__pycache__"
+      - "**/tests/**"
+      - "**/test_*"
+      - "**/*_test.py"
+      - "**/security_*"
+      - "**/upload_security_*"
+      - "**/debug_*"
+      - "**/check_*"
+      - "**/*.md"
+      - "**/migrate_*"
+      - "**/test_api.py"
+      - "**/.github/**"
+      - "**/.pre-commit-config.yaml"
+      - "**/.serverlessignore"
+      - "**/GUIA_*.md"
+      - "**/INSTRUCOES_*.md"
+      - "**/ANALISE_*.md"
+      - "**/PLANO_*.md"
+      - "**/RESUMO_*.md"
+      - "**/VERIFICACAO_*.md"
+      - "**/API_*.md"
+      - "**/SECURITY_*.md"
+      - "**/WORKFLOWS_*.md"
+      - "**/SECRETS_*.md"
+      - "**/node_modules/**"
+      - "**/venv/**"
+      - "**/.venv*/**"
+      - "**/exportar.py"  # Será incluído manualmente
+      - "**/dashboard.py"  # Será incluído manualmente
+      - "**/s3_service.py"  # Será incluído manualmente
+      - "**/auth.py"  # Será incluído manualmente
+      - "**/database_dev.py"
+      - "**/lambda_dashboard.py"
+      - "**/requirements-lambda.txt"
+      - "**/requirements-lambda-minimal.txt"
+      - "**/package.json"
+      - "**/package-lock.json"
+
+# Configurações de recursos otimizadas
+resources:
+  Resources:
+    # S3 Bucket para uploads (se não existir)
+    UploadsBucket:
+      Type: AWS::S3::Bucket
+      Properties:
+        BucketName: ${self:provider.environment.S3_BUCKET}
+        PublicAccessBlockConfiguration:
+          BlockPublicAcls: true
+          BlockPublicPolicy: true
+          IgnorePublicAcls: true
+          RestrictPublicBuckets: true
+        VersioningConfiguration:
+          Status: Enabled
+        LifecycleConfiguration:
+          Rules:
+            - Id: DeleteOldVersions
+              Status: Enabled
+              NoncurrentVersionExpirationInDays: 30
+            - Id: DeleteIncompleteMultipartUploads
+              Status: Enabled
+              AbortIncompleteMultipartUpload:
+                DaysAfterInitiation: 7
+
+# Configurações de custo
+costOptimization:
+  # Estimativa de custo para 50 pacientes/mês
+  estimatedMonthlyCost: "$2-5 USD"
+  # Inclui: Lambda invocations, S3 storage, CloudWatch logs
