@@ -33,22 +33,27 @@ if not os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
 
 # Inicializar FastAPI com configuração para Lambda
 app = FastAPI(
-    title="API de Formulário de Pacientes",
-    description="API para gerenciamento de formulários de pacientes oncológicos",
+    title="ProjetoVida API",
+    description="API segura para gerenciamento de pacientes oncológicos",
     version="1.0.0",
-    root_path=root_path
+    root_path=root_path,
+    docs_url=None,  # Desabilitar docs em produção
+    redoc_url=None  # Desabilitar redoc em produção
 )
 
-# Configurar CORS
+# Configurar CORS - Adicione seu domínio de produção
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:5173,http://192.168.2.101:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://192.168.2.101:5173"
-    ],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
+    max_age=3600
 )
 
 # Handler para AWS Lambda
@@ -88,31 +93,10 @@ async def log_requests(request: Request, call_next):
     logger.info(f"Response status: {response.status_code}")
     return response
 
-# Rota raiz (pública)
+# Rota raiz (pública - apenas status)
 @app.get("/")
 def read_root():
-    return {"message": "API de Formulário de Pacientes"}
-
-# Rota de teste para verificar se a API está funcionando
-@app.get("/test")
-def test_api():
-    try:
-        # Testar conexão com banco
-        db = SessionLocal()
-        result = db.execute(text("SELECT 1"))
-        db.close()
-        
-        return {
-            "status": "success",
-            "message": "API funcionando corretamente",
-            "database": "conectado",
-            "models": "atualizados"
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Erro na API: {str(e)}"
-        }
+    return {"status": "online"}
 
 # Rota de verificação de autenticação
 @app.get("/auth/me", response_model=Dict[str, Any])
@@ -120,23 +104,13 @@ def read_users_me(current_user: Dict[str, Any] = Depends(get_current_user)):
     logger.info(f"Usuário autenticado: {current_user}")
     return current_user
 
-# Rota de teste para debug de autenticação
-@app.get("/auth/test")
-def test_auth(request: Request):
-    auth_header = request.headers.get("Authorization")
-    logger.info(f"Headers na rota de teste: {request.headers}")
-    if auth_header:
-        return {"status": "ok", "auth_header": auth_header[:20] + "..."}
-    else:
-        return {"status": "error", "message": "Cabeçalho de autorização ausente"}
 
-# Rota de teste para pacientes sem autenticação
-@app.get("/pacientes/teste")
-def test_pacientes():
-    return {"message": "Rota de teste para pacientes funcionando"}
 
 @app.get('/api/pacientes/exportar_excel')
-def api_exportar_pacientes_excel():
+def api_exportar_pacientes_excel(
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     print("Requisição para exportar pacientes para Excel recebida.")
     
     # Chama a função do seu script exportar.py
@@ -217,7 +191,11 @@ def create_paciente(
 
 # Rota para visualização detalhada do paciente
 @app.get("/paciente/view/{paciente_id}")
-def get_paciente_view(paciente_id: int, db: Session = Depends(get_db)):
+def get_paciente_view(
+    paciente_id: int, 
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
     paciente = crud.get_paciente_detalhes(db, paciente_id)
     if not paciente:
         raise HTTPException(status_code=404, detail="Paciente não encontrado")
