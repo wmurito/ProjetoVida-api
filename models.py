@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Date, Boolean, Numeric, ForeignK
 from sqlalchemy.orm import relationship
 from database import Base
 import datetime
+from security import encryption
 
 class Paciente(Base):
     __tablename__ = "paciente"
@@ -12,7 +13,7 @@ class Paciente(Base):
     # Identificação
     nome_completo = Column(String(255), nullable=False)
     data_nascimento = Column(Date)
-    cpf = Column(String(14), unique=True, index=True)
+    cpf = Column(String(255), unique=True, index=True)  # Criptografado
     prontuario = Column(String(50), unique=True, index=True)
     genero = Column(String(20))
     estado_civil = Column(String(50))
