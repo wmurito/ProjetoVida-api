@@ -59,6 +59,3 @@ lambda-*.zip
 # Docs (manter apenas essenciais)
 *.md
 !README.md
-!ENDPOINTS.md
-!DEPLOY_SERVERLESS.md
-!QUICK_DEPLOY.md
