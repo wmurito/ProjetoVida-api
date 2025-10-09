@@ -23,20 +23,15 @@ from s3_service import s3_service
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Configuração para ambiente AWS Lambda
-stage = os.environ.get('STAGE', None)
-root_path = f"/{stage}" if stage else ""
-
 # Criar tabelas apenas em desenvolvimento local
 if not os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
     models.Base.metadata.create_all(bind=engine)
 
-# Inicializar FastAPI com configuração para Lambda
+# Inicializar FastAPI
 app = FastAPI(
     title="ProjetoVida API",
     description="API segura para gerenciamento de pacientes oncológicos",
-    version="1.0.0",
-    root_path=root_path
+    version="1.0.0"
 )
 
 # Configurar CORS - Adicione seu domínio de produção
