@@ -65,15 +65,9 @@ custom:
     dockerizePip: true
     dockerImage: public.ecr.aws/sam/build-python3.9:latest
     slim: true
-    strip: true
-    zip: true
+    strip: false
     layer: true
     fileName: requirements-lambda.txt
-    noDeps: false
-    noDeploy: false
-    pipCmdExtraArgs:
-      - --no-cache-dir
-      - --compile
 
 functions:
   api:
@@ -118,4 +112,3 @@ package:
     - '!.DS_Store'
     - '!Thumbs.db'
     - '!cleanup.ps1'
-    - '!.serverless/**'

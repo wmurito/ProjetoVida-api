@@ -38,7 +38,7 @@ app = FastAPI(
 # Configurar CORS seguro
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://192.168.2.101:5173,https://84i8-3.execute-api.us-east-1.amazonaws.com"
+    "http://localhost:5173,http://192.168.2.101:5173,https://master.d1yi28nqqe44f2.amplifyapp.com"
 ).split(",")
 
 # Validar origens para evitar configurações perigosas
@@ -53,19 +53,18 @@ def validate_origins(origins):
 
 SAFE_ORIGINS = validate_origins(ALLOWED_ORIGINS)
 
-# Em produção Lambda, usar origens específicas (NUNCA usar "*" com credentials=True)
+# Em produção Lambda, adicionar origem do Amplify
 if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
-    # Usar domínio específico da API Gateway
-    SAFE_ORIGINS = ["https://84i8-3.execute-api.us-east-1.amazonaws.com"]
+    SAFE_ORIGINS = ["https://master.d1yi28nqqe44f2.amplifyapp.com"]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=SAFE_ORIGINS,
-    allow_credentials=True,  # Manter apenas se necessário
+    allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
-    max_age=1800,  # Reduzido para 30 minutos
-    expose_headers=["X-Total-Count"]  # Apenas headers necessários
+    max_age=1800,
+    expose_headers=["X-Total-Count"]
 )
 
 # Handler para AWS Lambda
