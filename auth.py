@@ -85,7 +85,8 @@ async def verify_token(credentials: HTTPAuthorizationCredentials = Depends(oauth
         )
     
     token = credentials.credentials
-    logger.debug(f"Token recebido: {token[:20]}...")
+    # Log seguro sem expor token
+    logger.debug("Token JWT recebido para validação")
     
     # Obter configuração do Cognito
     cognito_config = get_cognito_config()

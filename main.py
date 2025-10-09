@@ -34,19 +34,37 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Configurar CORS - Adicione seu domínio de produção
+# Configurar CORS seguro
 ALLOWED_ORIGINS = os.getenv(
     "ALLOWED_ORIGINS",
-    "http://localhost:5173,http://192.168.2.101:5173"
+    "http://localhost:5173,http://192.168.2.101:5173,https://84i8-3.execute-api.us-east-1.amazonaws.com"
 ).split(",")
+
+# Validar origens para evitar configurações perigosas
+def validate_origins(origins):
+    """Valida se as origens são seguras"""
+    safe_origins = []
+    for origin in origins:
+        origin = origin.strip()
+        if origin and not origin.startswith('*'):
+            safe_origins.append(origin)
+    return safe_origins
+
+SAFE_ORIGINS = validate_origins(ALLOWED_ORIGINS)
+
+# Em produção Lambda, usar origens específicas (NUNCA usar "*" com credentials=True)
+if os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
+    # Usar domínio específico da API Gateway
+    SAFE_ORIGINS = ["https://84i8-3.execute-api.us-east-1.amazonaws.com"]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=ALLOWED_ORIGINS,
-    allow_credentials=True,
+    allow_origins=SAFE_ORIGINS,
+    allow_credentials=True,  # Manter apenas se necessário
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization"],
-    max_age=3600
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    max_age=1800,  # Reduzido para 30 minutos
+    expose_headers=["X-Total-Count"]  # Apenas headers necessários
 )
 
 # Handler para AWS Lambda
@@ -63,17 +81,29 @@ def get_db():
 # Middleware para log e segurança
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
-    logger.info(f"Request: {request.method} {request.url.path}")
+    # Log seguro sem dados sensíveis
+    client_ip = request.client.host if request.client else "unknown"
+    logger.info(f"Request: {request.method} {request.url.path} from {client_ip[:8]}***")
+    
+    # Verificar User-Agent suspeito
+    user_agent = request.headers.get("user-agent", "")
+    if any(suspicious in user_agent.lower() for suspicious in ["bot", "crawler", "scanner", "sqlmap"]):
+        logger.warning(f"Request suspeito bloqueado: {user_agent[:50]}")
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Acesso negado"}
+        )
+    
     response = await call_next(request)
     
     # Adicionar cabeçalhos de segurança
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    from security import security_headers
+    security_headers_dict = security_headers.get_security_headers()
+    for header, value in security_headers_dict.items():
+        response.headers[header] = value
     
-    logger.info(f"Response: {response.status_code}")
+    # Log de resposta sem dados sensíveis
+    logger.info(f"Response: {response.status_code} for {request.method} {request.url.path}")
     return response
 
 # Rota raiz (pública - apenas status)
@@ -117,27 +147,45 @@ def api_exportar_pacientes_excel(
     else:
         raise HTTPException(status_code=500, detail="Falha ao gerar relatório")
 
-# Rota para testar autenticação com token
+# Rota para testar autenticação com token (PROTEGIDA)
 @app.post("/auth/validate-token")
-async def validate_token(request: Request):
+@limiter.limit("5/minute")  # Rate limiting rigoroso
+async def validate_token(
+    request: Request,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Endpoint protegido para validação de token.
+    Apenas usuários autenticados podem validar tokens.
+    """
     try:
         body = await request.json()
         token = body.get("token")
         if not token:
-            return {"valid": False}
+            raise HTTPException(status_code=400, detail="Token não fornecido")
+        
+        # Validar formato do token
+        if not token.startswith("Bearer "):
+            token = f"Bearer {token}"
         
         from auth import verify_token
         from fastapi.security import HTTPAuthorizationCredentials
         
-        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token)
+        credentials = HTTPAuthorizationCredentials(scheme="Bearer", credentials=token.replace("Bearer ", ""))
         
         try:
             claims = await verify_token(credentials)
-            return {"valid": True}
-        except Exception:
-            return {"valid": False}
-    except Exception:
-        return {"valid": False}
+            # Log seguro sem expor dados sensíveis
+            logger.info(f"Token validado para usuário: {claims.get('email', 'N/A')[:3]}***")
+            return {"valid": True, "user": claims.get("email", "N/A")[:3] + "***"}
+        except Exception as e:
+            logger.warning(f"Tentativa de validação de token inválido: {str(e)[:50]}")
+            raise HTTPException(status_code=401, detail="Token inválido")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erro na validação de token: {str(e)[:50]}")
+        raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # Rate limiter e imports para upload
 from fastapi import File, UploadFile, Form
@@ -153,8 +201,14 @@ limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# Armazenamento de sessões (em produção, usar Redis)
+# Armazenamento de sessões seguro com TTL
+import threading
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+# Thread-safe storage para sessões
 active_sessions: Dict[str, Dict] = {}
+session_lock = threading.Lock()
 
 class SecureFileUpload(BaseModel):
     """Validação segura de upload de arquivo"""
@@ -169,7 +223,7 @@ class SecureFileUpload(BaseModel):
             raise ValueError('Nome de arquivo inválido')
         
         # Verificar caracteres perigosos
-        dangerous_chars = ['..', '/', '\\', '<', '>', ':', '"', '|', '?', '*']
+        dangerous_chars = ['..', '/', '\\', '<', '>', ':', '"', '|', '?', '*', ';', '&', '`', '$']
         if any(char in v for char in dangerous_chars):
             raise ValueError('Nome de arquivo contém caracteres inválidos')
         
@@ -177,6 +231,10 @@ class SecureFileUpload(BaseModel):
         allowed_extensions = ['.pdf', '.jpg', '.jpeg', '.png']
         if not any(v.lower().endswith(ext) for ext in allowed_extensions):
             raise ValueError('Extensão de arquivo não permitida')
+        
+        # Verificar se não é um caminho absoluto
+        if v.startswith('/') or v.startswith('\\'):
+            raise ValueError('Nome de arquivo não pode ser um caminho absoluto')
         
         return v
     
@@ -201,11 +259,26 @@ class SecureFileUpload(BaseModel):
             header, data = v.split(',', 1)
             decoded = base64.b64decode(data)
             
-            max_size = 5 * 1024 * 1024
+            # Verificar tamanho (2MB máximo para maior segurança)
+            max_size = 2 * 1024 * 1024
             if len(decoded) > max_size:
-                raise ValueError('Arquivo muito grande (máximo 5MB)')
+                raise ValueError('Arquivo muito grande (máximo 2MB)')
             
+            # Verificar se é base64 válido
             base64.b64decode(data, validate=True)
+            
+            # Verificar assinatura de arquivo (magic bytes)
+            if decoded.startswith(b'%PDF'):
+                # PDF válido
+                pass
+            elif decoded.startswith(b'\xff\xd8\xff'):
+                # JPEG válido
+                pass
+            elif decoded.startswith(b'\x89PNG\r\n\x1a\n'):
+                # PNG válido
+                pass
+            else:
+                raise ValueError('Tipo de arquivo não reconhecido ou corrompido')
             
         except Exception as e:
             raise ValueError(f'Dados de arquivo inválidos: {str(e)}')
@@ -214,42 +287,54 @@ class SecureFileUpload(BaseModel):
     
     @validator('cpf')
     def validate_cpf(cls, v):
-        if not v or len(v) < 11:
+        from security import sanitizer
+        if not sanitizer.validate_cpf_format(v):
             raise ValueError('CPF inválido')
         return v
 
 def validate_session(session_id: str, ip_address: str) -> bool:
-    """Valida se a sessão é válida"""
-    if session_id not in active_sessions:
-        return False
-    
-    session = active_sessions[session_id]
-    
-    if datetime.utcnow() - session['created_at'] > timedelta(minutes=5):
-        del active_sessions[session_id]
-        return False
-    
-    session['last_activity'] = datetime.utcnow()
-    return True
+    """Valida se a sessão é válida com thread safety"""
+    with session_lock:
+        if session_id not in active_sessions:
+            return False
+        
+        session = active_sessions[session_id]
+        
+        # Verificar expiração (2 minutos para maior segurança)
+        if datetime.utcnow() - session['created_at'] > timedelta(minutes=2):
+            del active_sessions[session_id]
+            logger.info(f"Sessão expirada removida: {session_id[:8]}...")
+            return False
+        
+        # Verificar IP address
+        if session.get('ip_address') != ip_address:
+            logger.warning(f"Tentativa de acesso com IP diferente: {session_id[:8]}...")
+            del active_sessions[session_id]
+            return False
+        
+        session['last_activity'] = datetime.utcnow()
+        return True
 
 def create_session(ip_address: str) -> str:
-    """Cria uma nova sessão segura"""
+    """Cria uma nova sessão segura com thread safety"""
     session_id = f"upload-{uuid.uuid4()}"
     
-    active_sessions[session_id] = {
-        'created_at': datetime.utcnow(),
-        'ip_address': ip_address,
-        'uploads_count': 0,
-        'last_activity': datetime.utcnow()
-    }
+    with session_lock:
+        active_sessions[session_id] = {
+            'created_at': datetime.utcnow(),
+            'ip_address': ip_address,
+            'uploads_count': 0,
+            'last_activity': datetime.utcnow(),
+            'max_uploads': 3  # Limite de uploads por sessão
+        }
     
-    logger.info(f"Sessão criada: {session_id[:8]}...")
+    logger.info(f"Sessão segura criada: {session_id[:8]}... para IP: {ip_address[:8]}***")
     return session_id
 
 # Rotas protegidas para Paciente
 
 @app.post("/upload-termo-aceite")
-@limiter.limit("10/minute")
+@limiter.limit("5/minute")  # Reduzido para maior segurança
 async def upload_termo_aceite(
     cpf: str = Form(...),
     termo: UploadFile = File(...),
@@ -283,7 +368,7 @@ async def upload_termo_aceite(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3: {termo_key}")
+        logger.info(f"Termo salvo no S3 para CPF: {cpf[:3]}***")
         return {"success": True, "message": "Termo de aceite enviado com sucesso", "cpf": cpf}
         
     except HTTPException:
@@ -420,7 +505,7 @@ def dashboard_delta_t(
 
 # Endpoints seguros para upload via QR Code
 @app.post("/upload-mobile/{session_id}")
-@limiter.limit("5/minute")  # 5 uploads por minuto por IP
+@limiter.limit("3/minute")  # Reduzido para 3 uploads por minuto por IP
 async def secure_upload_mobile(
     session_id: str,
     file_data: SecureFileUpload,
@@ -433,9 +518,15 @@ async def secure_upload_mobile(
             logger.warning(f"Tentativa de upload com sessão inválida: {session_id[:8]}...")
             raise HTTPException(status_code=404, detail="Sessão inválida ou expirada")
         
-        # Incrementar contador de uploads
-        if session_id in active_sessions:
-            active_sessions[session_id]['uploads_count'] += 1
+        # Verificar limite de uploads por sessão
+        with session_lock:
+            if session_id in active_sessions:
+                session = active_sessions[session_id]
+                if session['uploads_count'] >= session['max_uploads']:
+                    logger.warning(f"Limite de uploads excedido para sessão: {session_id[:8]}...")
+                    raise HTTPException(status_code=429, detail="Limite de uploads excedido para esta sessão")
+                
+                session['uploads_count'] += 1
         
         # Log seguro (sem dados sensíveis)
         logger.info(f"Upload recebido para sessão: {session_id[:8]}...")
@@ -457,7 +548,7 @@ async def secure_upload_mobile(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3: {termo_key}")
+        logger.info(f"Termo salvo no S3 para CPF: {cpf[:3]}***")
         
         return {"success": True, "message": "Arquivo recebido com sucesso", "cpf": file_data.cpf}
         
@@ -468,7 +559,7 @@ async def secure_upload_mobile(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.get("/upload-status/{session_id}")
-@limiter.limit("60/minute")  # 60 verificações por minuto (1 por segundo)
+@limiter.limit("30/minute")  # Reduzido para 30 verificações por minuto
 async def secure_check_upload_status(
     session_id: str,
     request: Request
@@ -495,7 +586,7 @@ async def secure_check_upload_status(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.post("/create-upload-session")
-@limiter.limit("10/minute")  # 10 sessões por minuto
+@limiter.limit("5/minute")  # Reduzido para 5 sessões por minuto
 async def create_upload_session(request: Request):
     """Cria uma nova sessão de upload"""
     try:
