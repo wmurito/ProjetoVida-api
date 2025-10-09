@@ -1,421 +1,64 @@
-# =============================================================================
-# 🔒 GITIGNORE PARA PROJETO VIDA - SEGURANÇA MÁXIMA
-# =============================================================================
-# Este arquivo protege contra vazamento de dados sensíveis e arquivos desnecessários
-# NUNCA remova ou modifique sem autorização de segurança!
-
-# =============================================================================
-# 🚨 CRÍTICO - DADOS SENSÍVEIS (NUNCA COMMITAR!)
-# =============================================================================
-
-# Variáveis de ambiente e configurações sensíveis
+# Environment
 .env
 .env.*
 !.env.example
-.env.local
-.env.development
-.env.staging
-.env.production
-.env.test
-config.local.py
-settings.local.py
-local_settings.py
 
-# Credenciais AWS
+# AWS
 .aws/
-aws-credentials
-aws-config
 credentials
 *.pem
 *.key
-*.crt
-*.p12
-*.pfx
-*.cer
-*.der
-*.csr
-*.keystore
-*.jks
-*.pkcs12
 
-# Secrets e tokens
-secrets.json
-.secrets
-*.secret
-*.secrets
-secret_*
-secrets_*
-token.json
-tokens.json
-.auth_token
-auth_token*
-apikey*
-api_key*
-api-key*
-.credentials
-credentials.json
-password*
-passwords*
-.password
-*.token
-*.tokens
-
-# Arquivos de deploy sensíveis
-params.json
-!params.example.json
-serverless.yml.local
-serverless-state.json
-.serverless-state.json
-
-# =============================================================================
-# 🐍 PYTHON - ARQUIVOS DE DESENVOLVIMENTO
-# =============================================================================
-
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
-
-# Distribution / packaging
 .Python
 build/
-develop-eggs/
 dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
-
-# Virtual environments
 .venv/
 venv/
-ENV/
-env/
-.venv-*/
-env.bak/
-venv.bak/
-.venv-new/
 
 # Testing
 .pytest_cache/
 .coverage
-.coverage.*
 htmlcov/
-.tox/
-.nox/
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-cover/
+tests/
+test_*.py
 
-# Type checking
-.mypy_cache/
-.dmypy.json
-dmypy.json
-.pyre/
-.pytype/
-
-# =============================================================================
-# 🗄️ BANCO DE DADOS - DADOS SENSÍVEIS
-# =============================================================================
-
-# Arquivos de banco de dados
+# Database
 *.db
-*.sqlite
-*.sqlite3
-db.sqlite3
-db.sqlite3-journal
-
-# Backups de banco
+*.sqlite*
 *.sql
 *.dump
 *.backup
-*.bak
-database_backup*
-db_backup*
 
-# Dados de teste com informações sensíveis
-test_data/
-test_credentials*
-*.test.env
-test_database*
-
-# =============================================================================
-# 🔍 SEGURANÇA E TESTES - ARQUIVOS SENSÍVEIS
-# =============================================================================
-
-# Relatórios de segurança
-security_scan_*.json
-safety_scan_*.json
-bandit_*.json
-npm-audit-*.json
-vulnerability_*.json
-
-# Arquivos de teste e debug
-test_*.py
-*_test.py
-test_*.js
-*_test.js
-test_*.json
-*_test.json
-debug_*.py
-debug_*.js
-debug_*.json
-check_*.py
-check_*.js
-security_tests.py
-security_check.py
-security_fixes.py
-upload_security_*.py
-test_upload_*.py
-
-# Arquivos de sessão
-sessions/
-*.session
-session_*
-
-# =============================================================================
-# 📁 UPLOADS E ARQUIVOS TEMPORÁRIOS
-# =============================================================================
-
-# Uploads de usuários
-uploads/
-temp/
-tmp/
-files/
-documents/
-attachments/
-
-# Arquivos temporários
-*.tmp
-*.temp
-*.swp
-*.swo
-*~
+# Logs
 *.log
-*.out
-*.err
-debug.log
-error.log
+logs/
 
-# Excel e documentos temporários
-*.xlsx
-*.xls
-*.docx
-*.doc
-*.pdf
+# IDE
+.vscode/
+.idea/
+*.swp
 
-# =============================================================================
-# 🏗️ BUILD E DEPLOY
-# =============================================================================
+# OS
+.DS_Store
+Thumbs.db
 
 # Serverless
 .serverless/
-.serverless-state.json
-
-# Node modules (se usar)
 node_modules/
 package-lock.json
-yarn.lock
 
-# Build artifacts
-build/
-dist/
-*.build
+# Build
+*.zip
+lambda-*.zip
 
-# =============================================================================
-# 💻 IDE E EDITORES
-# =============================================================================
-
-# VS Code
-.vscode/
-*.code-workspace
-
-# PyCharm
-.idea/
-*.iml
-*.ipr
-*.iws
-
-# Sublime Text
-*.sublime-project
-*.sublime-workspace
-
-# Spyder
-.spyderproject
-.spyproject
-
-# Rope
-.ropeproject
-
-# =============================================================================
-# 🖥️ SISTEMA OPERACIONAL
-# =============================================================================
-
-# macOS
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-.AppleDouble
-.LSOverride
-
-# Windows
-Thumbs.db
-Thumbs.db:encryptable
-ehthumbs.db
-ehthumbs_vista.db
-*.stackdump
-[Dd]esktop.ini
-$RECYCLE.BIN/
-*.cab
-*.msi
-*.msix
-*.msm
-*.msp
-*.lnk
-
-# Linux
-*~
-.fuse_hidden*
-.directory
-.Trash-*
-.nfs*
-
-# =============================================================================
-# 📚 DOCUMENTAÇÃO TEMPORÁRIA
-# =============================================================================
-
-# Documentação que não deve ir para produção
+# Docs (manter apenas essenciais)
 *.md
 !README.md
-!CHANGELOG.md
-!LICENSE
-!LICENSE.txt
-
-# Arquivos de análise e revisão
-CODE_REVIEW_*.md
-CORRECOES_*.md
-QRCODE_*.md
-SECURITY_*.md
-DEPLOY_*.md
-WORKFLOWS_*.md
-*_ANALYSIS.md
-*_REPORT.md
-*_SUMMARY.md
-*_GUIDE.md
-*_FIXES*.md
-*_CHECKLIST.md
-
-# Jupyter Notebooks
-.ipynb_checkpoints
-*.ipynb
-
-# Sphinx
-docs/_build/
-
-# =============================================================================
-# 🔧 FERRAMENTAS DE DESENVOLVIMENTO
-# =============================================================================
-
-# Pre-commit
-.pre-commit-config.yaml
-
-# Docker
-.dockerignore
-Dockerfile.local
-docker-compose.override.yml
-
-# Terraform
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
-# =============================================================================
-# 📊 MONITORAMENTO E LOGS
-# =============================================================================
-
-# Logs
-logs/
-*.log
-*.log.*
-log_*
-
-# Monitoring
-monitoring/
-metrics/
-stats/
-
-# =============================================================================
-# 🎯 ESPECÍFICO DO PROJETO VIDA
-# =============================================================================
-
-# Arquivos específicos do projeto que não devem ser commitados
-projetovida_dev.db
-projetovida_dev.db-journal
-*.dev.db
-*.test.db
-
-# Arquivos de configuração local
-config_local.py
-settings_local.py
-local_config.py
-
-# Arquivos de backup específicos
-backup_*
-*.backup
-*.bak
-
-# Arquivos de cache específicos
-cache/
-.cache/
-*.cache
-
-# =============================================================================
-# 🚨 REGRAS DE SEGURANÇA ADICIONAIS
-# =============================================================================
-
-# Qualquer arquivo que contenha dados pessoais
-*_personal*
-*_private*
-*_confidential*
-*_sensitive*
-
-# Arquivos de configuração de produção
-prod_*
-production_*
-staging_*
-
-# Arquivos de deploy específicos
-deploy_*
-deployment_*
-DEPLOY*.md
-!DEPLOY.md
-
-# =============================================================================
-# ⚠️ IMPORTANTE: NUNCA REMOVER ESTAS REGRAS!
-# =============================================================================
-# Este arquivo foi criado para proteger dados sensíveis
-# Se você precisar adicionar algo, consulte a equipe de segurança
-# NUNCA commite arquivos que contenham:
-# - Senhas
-# - Chaves de API
-# - Tokens de acesso
-# - Dados pessoais
-# - Configurações de produção
-# - Credenciais de banco de dados
+!ENDPOINTS.md
+!DEPLOY_SERVERLESS.md
+!QUICK_DEPLOY.md

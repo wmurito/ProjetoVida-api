@@ -5,10 +5,10 @@ from sqlalchemy.orm import Session
 def get_estadiamento(db: Session):
     result = db.execute("""
         SELECT 
-            COALESCE(estagio_clinico_pre_qxt, 'Não informado') AS estagio, 
+            COALESCE(estadiamento_clinico, 'Não informado') AS estagio, 
             COUNT(*) AS total
-        FROM masto.tratamento
-        GROUP BY estagio_clinico_pre_qxt
+        FROM masto.historia_doenca
+        GROUP BY estadiamento_clinico
         ORDER BY total DESC
     """).fetchall()
 
@@ -19,10 +19,10 @@ def get_estadiamento(db: Session):
 def get_sobrevida_global(db: Session):
     result = db.execute("""
         SELECT 
-            CASE WHEN morte IS TRUE THEN 'Óbito' ELSE 'Vivo' END AS status, 
+            COALESCE(status_vital, 'Não informado') AS status, 
             COUNT(*) AS total
         FROM masto.desfecho
-        GROUP BY status
+        GROUP BY status_vital
     """).fetchall()
 
     return [{"status": r[0], "total": r[1]} for r in result]
@@ -37,7 +37,7 @@ def get_taxa_recidiva(db: Session):
             UNION ALL
             SELECT 'Recidiva Regional' FROM masto.desfecho WHERE recidiva_regional IS TRUE
             UNION ALL
-            SELECT 'Metástase' FROM masto.desfecho WHERE metastase IS TRUE
+            SELECT 'Metástase' FROM masto.desfecho WHERE metastases IS NOT NULL AND metastases::text != '[]'
         ) AS eventos
         GROUP BY tipo
     """).fetchall()
@@ -50,25 +50,25 @@ def get_media_delta_t(db: Session):
     result = db.execute("""
         SELECT 
             'Diagnóstico → Cirurgia' AS processo, 
-            AVG(DATE_PART('day', data_cirurgia - inicio_neoadjuvante)) AS media_dias
-        FROM masto.tratamento
-        WHERE data_cirurgia IS NOT NULL AND inicio_neoadjuvante IS NOT NULL
+            AVG(DATE_PART('day', td.data_cirurgia - td.data_diagnostico)) AS media_dias
+        FROM masto.tempos_diagnostico td
+        WHERE td.data_cirurgia IS NOT NULL AND td.data_diagnostico IS NOT NULL
 
         UNION ALL
 
         SELECT 
-            'Diagnóstico → Início QT', 
-            AVG(DATE_PART('day', inicio_quimioterapia - inicio_neoadjuvante)) 
-        FROM masto.tratamento
-        WHERE inicio_quimioterapia IS NOT NULL AND inicio_neoadjuvante IS NOT NULL
+            'Diagnóstico → Início Tratamento', 
+            AVG(DATE_PART('day', td.data_inicio_tratamento - td.data_diagnostico)) 
+        FROM masto.tempos_diagnostico td
+        WHERE td.data_inicio_tratamento IS NOT NULL AND td.data_diagnostico IS NOT NULL
 
         UNION ALL
 
         SELECT 
-            'Diagnóstico → Início RT', 
-            AVG(DATE_PART('day', inicio_radioterapia - inicio_neoadjuvante)) 
-        FROM masto.tratamento
-        WHERE inicio_radioterapia IS NOT NULL AND inicio_neoadjuvante IS NOT NULL
+            'Primeira Consulta → Diagnóstico', 
+            AVG(DATE_PART('day', td.data_diagnostico - td.data_primeira_consulta)) 
+        FROM masto.tempos_diagnostico td
+        WHERE td.data_diagnostico IS NOT NULL AND td.data_primeira_consulta IS NOT NULL
     """).fetchall()
 
     return [
