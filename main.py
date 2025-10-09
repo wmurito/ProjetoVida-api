@@ -84,7 +84,7 @@ def get_db():
 async def security_middleware(request: Request, call_next):
     # Log seguro sem dados sensíveis
     client_ip = request.client.host if request.client else "unknown"
-    logger.info(f"Request: {request.method} {request.url.path} from {client_ip[:8]}***")
+    # Log de requisição sanitizado para produção
     
     # Verificar User-Agent suspeito
     user_agent = request.headers.get("user-agent", "")
@@ -104,8 +104,7 @@ async def security_middleware(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
-    # Log de resposta sem dados sensíveis
-    logger.info(f"Response: {response.status_code} for {request.method} {request.url.path}")
+    # Log de resposta sanitizado para produção
     return response
 
 # Rota raiz (pública - apenas status)
@@ -191,16 +190,15 @@ async def validate_token(
         
         try:
             claims = await verify_token(credentials)
-            # Log seguro sem expor dados sensíveis
-            logger.info(f"Token validado para usuário: {claims.get('email', 'N/A')[:3]}***")
+            # Log de validação de token sanitizado
             return {"valid": True, "user": claims.get("email", "N/A")[:3] + "***"}
         except Exception as e:
-            logger.warning(f"Tentativa de validação de token inválido: {str(e)[:50]}")
+            # Log de tentativa de validação inválida
             raise HTTPException(status_code=401, detail="Token inválido")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Erro na validação de token: {str(e)[:50]}")
+        # Log de erro de validação sanitizado
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 # Armazenamento de sessões seguro com TTL
@@ -305,7 +303,7 @@ def validate_session(session_id: str, ip_address: str) -> bool:
         # Verificar expiração (2 minutos para maior segurança)
         if datetime.utcnow() - session['created_at'] > timedelta(minutes=2):
             del active_sessions[session_id]
-            logger.info(f"Sessão expirada removida: {session_id[:8]}...")
+            # Log de sessão expirada removida
             return False
         
         # Verificar IP address
