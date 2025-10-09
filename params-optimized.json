@@ -1,8 +1,0 @@
-{
-  "s3Bucket": "projeto-vida-prod-optimized",
-  "s3KeyPrefix": "uploads",
-  "dbSecretName": "projeto-vida/database",
-  "cognitoSecretName": "projeto-vida/cognito",
-  "awsRegion": "us-east-1",
-  "corsOrigins": "https://your-frontend-domain.com,http://localhost:5173"
-}

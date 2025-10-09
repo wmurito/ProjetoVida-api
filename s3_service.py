@@ -13,7 +13,7 @@ class S3UploadService:
         self.prefix = 'qrcode-uploads/'
     
     def save_upload(self, session_id: str, file_data: dict):
-        """Salva arquivo no S3"""
+        """Salva arquivo no S3 com criptografia"""
         key = f"{self.prefix}{session_id}.json"
         data = {
             **file_data,
@@ -23,7 +23,9 @@ class S3UploadService:
             Bucket=self.bucket,
             Key=key,
             Body=json.dumps(data),
-            ContentType='application/json'
+            ContentType='application/json',
+            ServerSideEncryption='AES256',
+            ACL='private'
         )
         logger.info(f"Arquivo salvo no S3: {key}")
     

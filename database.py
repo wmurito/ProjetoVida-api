@@ -42,10 +42,14 @@ else:
     # Configuração para PostgreSQL (produção)
     engine = create_engine(
         DATABASE_URL,
-        pool_pre_ping=True,  # Verifica conexão antes de usar
-        pool_recycle=3600,   # Recicla conexões após 1 hora
-        pool_size=5,         # Tamanho do pool de conexões
-        max_overflow=10      # Máximo de conexões extras
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        pool_size=5,
+        max_overflow=10,
+        connect_args={
+            "sslmode": "prefer",
+            "connect_timeout": 10
+        }
     )
 
 # 🏗️ Sessão
