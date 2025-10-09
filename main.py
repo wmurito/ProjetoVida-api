@@ -19,6 +19,7 @@ import logging
 from auth import verify_token, get_current_user
 from dashboard import ( get_estadiamento, get_sobrevida_global, get_taxa_recidiva, get_media_delta_t)
 from s3_service import s3_service
+# from security import security_headers, sanitizer
 # Configurar logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -97,10 +98,11 @@ async def security_middleware(request: Request, call_next):
     response = await call_next(request)
     
     # Adicionar cabeçalhos de segurança
-    from security import security_headers
-    security_headers_dict = security_headers.get_security_headers()
-    for header, value in security_headers_dict.items():
-        response.headers[header] = value
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
     # Log de resposta sem dados sensíveis
     logger.info(f"Response: {response.status_code} for {request.method} {request.url.path}")
@@ -147,6 +149,20 @@ def api_exportar_pacientes_excel(
     else:
         raise HTTPException(status_code=500, detail="Falha ao gerar relatório")
 
+# Rate limiter e imports para upload
+from fastapi import File, UploadFile, Form
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+import uuid
+import base64
+from datetime import datetime, timedelta
+from pydantic import BaseModel, validator
+
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 # Rota para testar autenticação com token (PROTEGIDA)
 @app.post("/auth/validate-token")
 @limiter.limit("5/minute")  # Rate limiting rigoroso
@@ -186,20 +202,6 @@ async def validate_token(
     except Exception as e:
         logger.error(f"Erro na validação de token: {str(e)[:50]}")
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
-
-# Rate limiter e imports para upload
-from fastapi import File, UploadFile, Form
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
-from slowapi.errors import RateLimitExceeded
-import uuid
-import base64
-from datetime import datetime, timedelta
-from pydantic import BaseModel, validator
-
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Armazenamento de sessões seguro com TTL
 import threading
@@ -287,8 +289,8 @@ class SecureFileUpload(BaseModel):
     
     @validator('cpf')
     def validate_cpf(cls, v):
-        from security import sanitizer
-        if not sanitizer.validate_cpf_format(v):
+        # Validação básica de CPF
+        if not v or len(v) < 11:
             raise ValueError('CPF inválido')
         return v
 
