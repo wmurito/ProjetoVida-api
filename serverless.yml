@@ -65,9 +65,15 @@ custom:
     dockerizePip: true
     dockerImage: public.ecr.aws/sam/build-python3.9:latest
     slim: true
-    strip: false
+    strip: true
     zip: true
     layer: true
+    fileName: requirements-lambda.txt
+    noDeps: false
+    noDeploy: false
+    pipCmdExtraArgs:
+      - --no-cache-dir
+      - --compile
 
 functions:
   api:
@@ -100,5 +106,16 @@ package:
     - '!*.zip'
     - '!*.ps1'
     - '!*.sh'
+    - '!requirements.txt'
+    - '!requirements-dev.txt'
+    - '!*.log'
+    - '!.pytest_cache/**'
+    - '!coverage/**'
+    - '!.coverage'
+    - '!htmlcov/**'
+    - '!.tox/**'
+    - '!.mypy_cache/**'
+    - '!.DS_Store'
+    - '!Thumbs.db'
     - '!cleanup.ps1'
     - '!.serverless/**'
