@@ -164,8 +164,7 @@ def get_paciente(db: Session, paciente_id: int):
                 "altura": result[20],
                 "peso": result[21],
                 "imc": result[22],
-                "idade": result[23],
-                "cpf": None  # CPF não disponível temporariamente
+                "idade": result[23]
             }
             return models.Paciente(**paciente_data)
         
@@ -218,8 +217,7 @@ def get_pacientes(db: Session, skip: int = 0, limit: int = 100):
                 "altura": row[20],
                 "peso": row[21],
                 "imc": row[22],
-                "idade": row[23],
-                "cpf": None  # CPF não disponível temporariamente
+                "idade": row[23]
             }
             # Criar objeto Paciente com os dados
             paciente = models.Paciente(**paciente_data)
@@ -379,9 +377,8 @@ def save_historico(db: Session, paciente):
         data_modificacao=datetime.datetime.utcnow(),
         dados_anteriores={
             "nome_completo": paciente.nome_completo,
-            "cpf": paciente.cpf,
+            "prontuario": paciente.prontuario,
             "data_nascimento": str(paciente.data_nascimento) if paciente.data_nascimento else None,
-            # Adicionar outros campos conforme necessário
         }
     )
     db.add(historico)
