@@ -58,25 +58,28 @@ class HistoriaPatologica(Base):
     id = Column(Integer, primary_key=True, index=True)
     paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
     
-    # Comorbidades - Estrutura aninhada conforme frontend
-    comorbidades_has = Column(Boolean, default=False)
-    comorbidades_diabetes = Column(Boolean, default=False)
-    comorbidades_hipertensao = Column(Boolean, default=False)
-    comorbidades_doenca_cardiaca = Column(Boolean, default=False)
-    comorbidades_doenca_renal = Column(Boolean, default=False)
-    comorbidades_doenca_pulmonar = Column(Boolean, default=False)
-    comorbidades_doenca_figado = Column(Boolean, default=False)
-    comorbidades_avc = Column(Boolean, default=False)
-    comorbidades_outra = Column(String(255))
+    # Comorbidades - Estrutura achatada conforme frontend
+    has = Column(Boolean, default=False)
+    diabetes = Column(Boolean, default=False)
+    hipertensao = Column(Boolean, default=False)
+    hipotireoidismo = Column(Boolean, default=False)
+    ansiedade = Column(Boolean, default=False)
+    depressao = Column(Boolean, default=False)
+    doenca_cardiaca = Column(Boolean, default=False)
+    doenca_renal = Column(Boolean, default=False)
+    doenca_pulmonar = Column(Boolean, default=False)
+    doenca_figado = Column(Boolean, default=False)
+    avc = Column(Boolean, default=False)
+    outra = Column(String(255))
     
-    # Neoplasia prévia - Estrutura aninhada conforme frontend
-    neoplasia_previa_has = Column(Boolean, default=False)
-    neoplasia_previa_qual = Column(String(255))
-    neoplasia_previa_idade_diagnostico = Column(Integer)
+    # Neoplasia prévia - Estrutura achatada conforme frontend
+    neoplasia_previa = Column(Boolean, default=False)
+    qual_neoplasia = Column(String(255))
+    idade_diagnostico_neoplasia = Column(String(50))
     
-    # Biópsia mamária prévia - Estrutura aninhada conforme frontend
-    biopsia_mamaria_previa_has = Column(Boolean, default=False)
-    biopsia_mamaria_previa_resultado = Column(String(255))
+    # Biópsia mamária prévia - Estrutura achatada conforme frontend
+    biopsia_mamaria_previa = Column(Boolean, default=False)
+    resultado_biopsia = Column(String(255))
     
     paciente = relationship("Paciente", back_populates="historia_patologica")
 
@@ -121,6 +124,7 @@ class HabitosVida(Base):
     
     etilismo = Column(String(20))
     etilismo_tempo_anos = Column(String(50))  # String conforme frontend
+    etilismo_dose_diaria = Column(String(50))
     
     atividade_fisica = Column(String(20))
     tipo_atividade = Column(String(255))  # Corrigido para 'tipo_atividade' conforme frontend
@@ -235,6 +239,7 @@ class Desfecho(Base):
     data_recidiva_regional = Column(Date)
     cirurgia_recidiva_regional = Column(String(255))
     
+    metastase_ocorreu = Column(Boolean, default=False)
     metastases = Column(JSON)
     
     paciente = relationship("Paciente", back_populates="desfecho")

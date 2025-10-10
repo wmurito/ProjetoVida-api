@@ -14,29 +14,11 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
     db.add(db_paciente)
     db.flush()
     
-    # História Patológica - converter estrutura aninhada
+    # História Patológica - estrutura achatada
     if paciente.historia_patologica:
-        hp = paciente.historia_patologica
-        comorbidades = hp.comorbidades or {}
-        neoplasia = hp.neoplasia_previa or {}
-        biopsia = hp.biopsia_mamaria_previa or {}
-        
         db_hist_pat = models.HistoriaPatologica(
-            paciente_id=db_paciente.paciente_id,
-            comorbidades_has=comorbidades.get('has', False),
-            comorbidades_diabetes=comorbidades.get('diabetes', False),
-            comorbidades_hipertensao=comorbidades.get('hipertensao', False),
-            comorbidades_doenca_cardiaca=comorbidades.get('doenca_cardiaca', False),
-            comorbidades_doenca_renal=comorbidades.get('doenca_renal', False),
-            comorbidades_doenca_pulmonar=comorbidades.get('doenca_pulmonar', False),
-            comorbidades_doenca_figado=comorbidades.get('doenca_figado', False),
-            comorbidades_avc=comorbidades.get('avc', False),
-            comorbidades_outra=comorbidades.get('outra', ''),
-            neoplasia_previa_has=neoplasia.get('has', False),
-            neoplasia_previa_qual=neoplasia.get('qual', ''),
-            neoplasia_previa_idade_diagnostico=int(neoplasia.get('idade_diagnostico', 0)) if neoplasia.get('idade_diagnostico') else None,
-            biopsia_mamaria_previa_has=biopsia.get('has', False),
-            biopsia_mamaria_previa_resultado=biopsia.get('resultado', '')
+            **paciente.historia_patologica.dict(),
+            paciente_id=db_paciente.paciente_id
         )
         db.add(db_hist_pat)
     
