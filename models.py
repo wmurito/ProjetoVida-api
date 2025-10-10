@@ -12,14 +12,12 @@ class Paciente(Base):
     # Identificação
     nome_completo = Column(String(255), nullable=False)
     data_nascimento = Column(Date)
-    prontuario = Column(String(50), unique=True, index=True)
     genero = Column(String(20))
     estado_civil = Column(String(50))
     cor_etnia = Column(String(50))
     escolaridade = Column(String(100))
     renda_familiar = Column(String(100))
     naturalidade = Column(String(100))
-    profissao = Column(String(100))
     
     # Endereço
     cep = Column(String(10))
@@ -32,7 +30,6 @@ class Paciente(Base):
     
     # Contato
     telefone = Column(String(20))
-    email = Column(String(255))
     
     # Dados físicos
     altura = Column(Numeric(4, 2))

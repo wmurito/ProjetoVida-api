@@ -269,14 +269,12 @@ class TemposDiagnostico(TemposDiagnosticoBase):
 class PacienteBase(BaseModel):
     nome_completo: str
     data_nascimento: Optional[date] = None
-    prontuario: Optional[str] = None
     genero: Optional[str] = None
     estado_civil: Optional[str] = None
     cor_etnia: Optional[str] = None
     escolaridade: Optional[str] = None
     renda_familiar: Optional[str] = None
     naturalidade: Optional[str] = None
-    profissao: Optional[str] = None
     cep: Optional[str] = None
     logradouro: Optional[str] = None
     numero: Optional[str] = None
@@ -285,7 +283,6 @@ class PacienteBase(BaseModel):
     cidade: Optional[str] = None
     uf: Optional[str] = None
     telefone: Optional[str] = None
-    email: Optional[EmailStr] = None
     altura: Optional[float] = None
     peso: Optional[float] = None
     imc: Optional[float] = None
@@ -361,14 +358,12 @@ class Paciente(PacienteBase):
             paciente_id=obj.paciente_id,
             nome_completo=obj.nome_completo,
             data_nascimento=obj.data_nascimento,
-            prontuario=obj.prontuario,
             genero=obj.genero,
             estado_civil=obj.estado_civil,
             cor_etnia=obj.cor_etnia,
             escolaridade=obj.escolaridade,
             renda_familiar=obj.renda_familiar,
             naturalidade=obj.naturalidade,
-            profissao=obj.profissao,
             cep=obj.cep,
             logradouro=obj.logradouro,
             numero=obj.numero,
@@ -377,7 +372,6 @@ class Paciente(PacienteBase):
             cidade=obj.cidade,
             uf=obj.uf,
             telefone=obj.telefone,
-            email=obj.email,
             altura=obj.altura,
             peso=obj.peso,
             imc=obj.imc,
