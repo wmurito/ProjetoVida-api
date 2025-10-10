@@ -281,7 +281,7 @@ class SecureFileUpload(BaseModel):
     fileName: str
     fileType: str
     fileData: str
-    prontuario: str
+    paciente_id: str
     
     @validator('fileName')
     def validate_file_name(cls, v):
@@ -397,16 +397,16 @@ def create_session(ip_address: str) -> str:
 @app.post("/upload-termo-aceite")
 @limiter.limit("5/minute")
 async def upload_termo_aceite(
-    prontuario: str = Form(...),
+    paciente_id: str = Form(...),
     termo: UploadFile = File(...),
     request: Request = None,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Endpoint para upload do termo de aceite via desktop"""
     try:
-        # Validar prontuário
-        if not prontuario or len(prontuario) < 3:
-            raise HTTPException(status_code=400, detail="Prontuário inválido")
+        # Validar paciente_id
+        if not paciente_id:
+            raise HTTPException(status_code=400, detail="ID do paciente inválido")
         
         # Ler conteúdo do arquivo
         content = await termo.read()
@@ -431,7 +431,7 @@ async def upload_termo_aceite(
             raise HTTPException(status_code=400, detail="Content-Type não permitido")
         
         # Salvar no S3
-        termo_key = f"termos/{prontuario}/termo_aceite.pdf"
+        termo_key = f"termos/{paciente_id}/termo_aceite.pdf"
         s3_service.s3_client.put_object(
             Bucket=s3_service.bucket,
             Key=termo_key,
@@ -441,8 +441,8 @@ async def upload_termo_aceite(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3 para prontuário: {prontuario}")
-        return {"success": True, "message": "Termo de aceite enviado com sucesso", "prontuario": prontuario}
+        logger.info(f"Termo salvo no S3 para paciente: {paciente_id}")
+        return {"success": True, "message": "Termo de aceite enviado com sucesso", "paciente_id": paciente_id}
         
     except HTTPException:
         raise
@@ -598,7 +598,7 @@ async def secure_upload_mobile(
         # Salvar termo definitivo no S3
         header, data = file_data.fileData.split(',', 1)
         file_content = base64.b64decode(data)
-        termo_key = f"termos/{file_data.prontuario}/termo_aceite.pdf"
+        termo_key = f"termos/{file_data.paciente_id}/termo_aceite.pdf"
         
         s3_service.s3_client.put_object(
             Bucket=s3_service.bucket,
@@ -609,9 +609,9 @@ async def secure_upload_mobile(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3 para prontuário: {file_data.prontuario}")
+        logger.info(f"Termo salvo no S3 para paciente: {file_data.paciente_id}")
         
-        return {"success": True, "message": "Arquivo recebido com sucesso", "prontuario": file_data.prontuario}
+        return {"success": True, "message": "Arquivo recebido com sucesso", "paciente_id": file_data.paciente_id}
         
     except HTTPException:
         raise

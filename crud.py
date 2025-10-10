@@ -377,7 +377,6 @@ def save_historico(db: Session, paciente):
         data_modificacao=datetime.datetime.utcnow(),
         dados_anteriores={
             "nome_completo": paciente.nome_completo,
-            "prontuario": paciente.prontuario,
             "data_nascimento": str(paciente.data_nascimento) if paciente.data_nascimento else None,
         }
     )
