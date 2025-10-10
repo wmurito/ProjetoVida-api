@@ -13,7 +13,7 @@ class Paciente(Base):
     # Identificação
     nome_completo = Column(String(255), nullable=False)
     data_nascimento = Column(Date)
-    cpf = Column(String(255), unique=True, index=True)  # Criptografado
+    cpf = Column(String(255), unique=True, index=True, nullable=True)  # Criptografado - temporariamente nullable
     prontuario = Column(String(50), unique=True, index=True)
     genero = Column(String(20))
     estado_civil = Column(String(50))
@@ -44,6 +44,7 @@ class Paciente(Base):
     
     # Relacionamentos
     historia_patologica = relationship("HistoriaPatologica", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
+    historia_familiar = relationship("HistoriaFamiliar", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
     familiares = relationship("Familiar", back_populates="paciente", cascade="all, delete-orphan")
     habitos_vida = relationship("HabitosVida", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
     paridade = relationship("Paridade", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
@@ -62,27 +63,40 @@ class HistoriaPatologica(Base):
     id = Column(Integer, primary_key=True, index=True)
     paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
     
-    # Comorbidades
-    has = Column(Boolean, default=False)
-    diabetes = Column(Boolean, default=False)
-    hipertensao = Column(Boolean, default=False)
-    doenca_cardiaca = Column(Boolean, default=False)
-    doenca_renal = Column(Boolean, default=False)
-    doenca_pulmonar = Column(Boolean, default=False)
-    doenca_figado = Column(Boolean, default=False)
-    avc = Column(Boolean, default=False)
-    outra_comorbidade = Column(String(255))
+    # Comorbidades - Estrutura aninhada conforme frontend
+    comorbidades_has = Column(Boolean, default=False)
+    comorbidades_diabetes = Column(Boolean, default=False)
+    comorbidades_hipertensao = Column(Boolean, default=False)
+    comorbidades_doenca_cardiaca = Column(Boolean, default=False)
+    comorbidades_doenca_renal = Column(Boolean, default=False)
+    comorbidades_doenca_pulmonar = Column(Boolean, default=False)
+    comorbidades_doenca_figado = Column(Boolean, default=False)
+    comorbidades_avc = Column(Boolean, default=False)
+    comorbidades_outra = Column(String(255))
     
-    # Neoplasia prévia
-    neoplasia_previa = Column(Boolean, default=False)
-    qual_neoplasia = Column(String(255))
-    idade_diagnostico_neoplasia = Column(Integer)
+    # Neoplasia prévia - Estrutura aninhada conforme frontend
+    neoplasia_previa_has = Column(Boolean, default=False)
+    neoplasia_previa_qual = Column(String(255))
+    neoplasia_previa_idade_diagnostico = Column(Integer)
     
-    # Biópsia mamária prévia
-    biopsia_mamaria_previa = Column(Boolean, default=False)
-    resultado_biopsia = Column(String(255))
+    # Biópsia mamária prévia - Estrutura aninhada conforme frontend
+    biopsia_mamaria_previa_has = Column(Boolean, default=False)
+    biopsia_mamaria_previa_resultado = Column(String(255))
     
     paciente = relationship("Paciente", back_populates="historia_patologica")
+
+
+class HistoriaFamiliar(Base):
+    __tablename__ = "historia_familiar"
+    __table_args__ = {"schema": "masto"}
+    
+    id = Column(Integer, primary_key=True, index=True)
+    paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
+    
+    cancer_familia = Column(Boolean, default=False)
+    observacoes = Column(String(500))
+    
+    paciente = relationship("Paciente", back_populates="historia_familiar")
 
 
 class Familiar(Base):
@@ -107,15 +121,15 @@ class HabitosVida(Base):
     paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
     
     tabagismo = Column(String(20))
-    tabagismo_carga = Column(Integer)
-    tabagismo_tempo_anos = Column(Integer)
+    tabagismo_carga = Column(String(50))  # String conforme frontend
+    tabagismo_tempo_anos = Column(String(50))  # String conforme frontend
     
     etilismo = Column(String(20))
-    etilismo_tempo_anos = Column(Integer)
+    etilismo_tempo_anos = Column(String(50))  # String conforme frontend
     
     atividade_fisica = Column(String(20))
-    tipo_atividade = Column(String(255))
-    tempo_atividade_semanal_min = Column(Integer)
+    tipo_atividade = Column(String(255))  # Corrigido para 'tipo_atividade' conforme frontend
+    tempo_atividade_semanal_min = Column(String(50))  # String conforme frontend
     
     paciente = relationship("Paciente", back_populates="habitos_vida")
 
@@ -127,24 +141,24 @@ class Paridade(Base):
     id = Column(Integer, primary_key=True, index=True)
     paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
     
-    gesta = Column(Integer)
-    para = Column(Integer)
-    aborto = Column(Integer)
+    gesta = Column(String(50))  # String conforme frontend
+    para = Column(String(50))  # String conforme frontend
+    aborto = Column(String(50))  # String conforme frontend
     teve_filhos = Column(Boolean, default=False)
-    idade_primeiro_filho = Column(Integer)
+    idade_primeiro_filho = Column(String(50))  # String conforme frontend
     
     amamentou = Column(Boolean, default=False)
-    tempo_amamentacao_meses = Column(Integer)
+    tempo_amamentacao_meses = Column(String(50))  # String conforme frontend
     
-    menarca_idade = Column(Integer)
+    menarca_idade = Column(String(50))  # String conforme frontend
     menopausa = Column(String(20))
-    idade_menopausa = Column(Integer)
+    idade_menopausa = Column(String(50))  # String conforme frontend
     
-    uso_trh = Column(Boolean, default=False)
-    tempo_uso_trh = Column(Integer)
+    uso_trh = Column(Boolean, default=False)  # Corrigido para 'uso_trh' conforme frontend
+    tempo_uso_trh = Column(String(50))  # String conforme frontend
     
     uso_aco = Column(Boolean, default=False)
-    tempo_uso_aco = Column(Integer)
+    tempo_uso_aco = Column(String(50))  # String conforme frontend
     
     paciente = relationship("Paciente", back_populates="paridade")
 
@@ -159,11 +173,11 @@ class HistoriaDoenca(Base):
     sinal_sintoma_principal = Column(String(255))
     outro_sinal_sintoma = Column(String(255))
     data_sintomas = Column(Date)
-    idade_diagnostico = Column(Integer)
+    idade_diagnostico = Column(String(50))  # String conforme JSON correto
     
     ecog = Column(String(10))
     lado_acometido = Column(String(20))
-    tamanho_tumoral_clinico = Column(Numeric(5, 2))
+    tamanho_tumoral_clinico = Column(String(50))  # String conforme JSON correto
     linfonodos_palpaveis = Column(String(20))
     estadiamento_clinico = Column(String(50))
     
@@ -180,9 +194,9 @@ class ModelosPreditores(Base):
     id = Column(Integer, primary_key=True, index=True)
     paciente_id = Column(Integer, ForeignKey("masto.paciente.paciente_id", ondelete="CASCADE"), unique=True)
     
-    score_tyrer_cuzick = Column(Numeric(5, 2))
-    score_canrisk = Column(Numeric(5, 2))
-    score_gail = Column(Numeric(5, 2))
+    score_tyrer_cuzick = Column(String(50))  # String conforme JSON correto
+    score_canrisk = Column(String(50))  # String conforme JSON correto
+    score_gail = Column(String(50))  # String conforme JSON correto
     
     paciente = relationship("Paciente", back_populates="modelos_preditores")
 
@@ -218,7 +232,6 @@ class Desfecho(Base):
     status_vital = Column(String(50))
     data_morte = Column(Date)
     causa_morte = Column(String(255))
-    
     recidiva_local = Column(Boolean, default=False)
     data_recidiva_local = Column(Date)
     cirurgia_recidiva_local = Column(String(255))
