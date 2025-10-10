@@ -4,31 +4,28 @@ from datetime import date, datetime
 
 # Historia Patologica
 class HistoriaPatologicaBase(BaseModel):
-    # Comorbidades - Estrutura aninhada conforme frontend
-    comorbidades: Optional[dict] = {
-        "has": False,
-        "diabetes": False,
-        "hipertensao": False,
-        "doenca_cardiaca": False,
-        "doenca_renal": False,
-        "doenca_pulmonar": False,
-        "doenca_figado": False,
-        "avc": False,
-        "outra": ""
-    }
+    # Comorbidades - Estrutura achatada conforme frontend
+    has: Optional[bool] = False
+    diabetes: Optional[bool] = False
+    hipertensao: Optional[bool] = False
+    hipotireoidismo: Optional[bool] = False
+    ansiedade: Optional[bool] = False
+    depressao: Optional[bool] = False
+    doenca_cardiaca: Optional[bool] = False
+    doenca_renal: Optional[bool] = False
+    doenca_pulmonar: Optional[bool] = False
+    doenca_figado: Optional[bool] = False
+    avc: Optional[bool] = False
+    outra: Optional[str] = ""
     
-    # Neoplasia prévia - Estrutura aninhada conforme frontend
-    neoplasia_previa: Optional[dict] = {
-        "has": False,
-        "qual": "",
-        "idade_diagnostico": ""
-    }
+    # Neoplasia prévia - Estrutura achatada conforme frontend
+    neoplasia_previa: Optional[bool] = False
+    qual_neoplasia: Optional[str] = ""
+    idade_diagnostico_neoplasia: Optional[str] = ""
     
-    # Biópsia mamária prévia - Estrutura aninhada conforme frontend
-    biopsia_mamaria_previa: Optional[dict] = {
-        "has": False,
-        "resultado": ""
-    }
+    # Biópsia mamária prévia - Estrutura achatada conforme frontend
+    biopsia_mamaria_previa: Optional[bool] = False
+    resultado_biopsia: Optional[str] = ""
 
 class HistoriaPatologicaCreate(HistoriaPatologicaBase):
     pass
@@ -78,6 +75,7 @@ class HabitosVidaBase(BaseModel):
     tabagismo_tempo_anos: Optional[str] = ""  # String conforme frontend
     etilismo: Optional[str] = "nao"
     etilismo_tempo_anos: Optional[str] = ""  # String conforme frontend
+    etilismo_dose_diaria: Optional[str] = ""
     atividade_fisica: Optional[str] = "nao"
     tipo_atividade: Optional[str] = ""  # String conforme frontend
     tempo_atividade_semanal_min: Optional[str] = ""  # String conforme frontend
@@ -235,6 +233,7 @@ class DesfechoBase(BaseModel):
     recidiva_regional: Optional[bool] = False
     data_recidiva_regional: Optional[date] = None
     cirurgia_recidiva_regional: Optional[str] = None
+    metastase_ocorreu: Optional[bool] = False
     metastases: Optional[list] = None
 
 class DesfechoCreate(DesfechoBase):
@@ -318,31 +317,28 @@ class Paciente(PacienteBase):
         
     @classmethod
     def from_orm(cls, obj):
-        # Converter historia_patologica para estrutura aninhada
+        # Converter historia_patologica para estrutura achatada
         hp_dict = None
         if obj.historia_patologica:
             hp = obj.historia_patologica
             hp_dict = {
-                "comorbidades": {
-                    "has": hp.comorbidades_has,
-                    "diabetes": hp.comorbidades_diabetes,
-                    "hipertensao": hp.comorbidades_hipertensao,
-                    "doenca_cardiaca": hp.comorbidades_doenca_cardiaca,
-                    "doenca_renal": hp.comorbidades_doenca_renal,
-                    "doenca_pulmonar": hp.comorbidades_doenca_pulmonar,
-                    "doenca_figado": hp.comorbidades_doenca_figado,
-                    "avc": hp.comorbidades_avc,
-                    "outra": hp.comorbidades_outra or ""
-                },
-                "neoplasia_previa": {
-                    "has": hp.neoplasia_previa_has,
-                    "qual": hp.neoplasia_previa_qual or "",
-                    "idade_diagnostico": str(hp.neoplasia_previa_idade_diagnostico) if hp.neoplasia_previa_idade_diagnostico else ""
-                },
-                "biopsia_mamaria_previa": {
-                    "has": hp.biopsia_mamaria_previa_has,
-                    "resultado": hp.biopsia_mamaria_previa_resultado or ""
-                }
+                "has": hp.has,
+                "diabetes": hp.diabetes,
+                "hipertensao": hp.hipertensao,
+                "hipotireoidismo": hp.hipotireoidismo,
+                "ansiedade": hp.ansiedade,
+                "depressao": hp.depressao,
+                "doenca_cardiaca": hp.doenca_cardiaca,
+                "doenca_renal": hp.doenca_renal,
+                "doenca_pulmonar": hp.doenca_pulmonar,
+                "doenca_figado": hp.doenca_figado,
+                "avc": hp.avc,
+                "outra": hp.outra or "",
+                "neoplasia_previa": hp.neoplasia_previa,
+                "qual_neoplasia": hp.qual_neoplasia or "",
+                "idade_diagnostico_neoplasia": hp.idade_diagnostico_neoplasia or "",
+                "biopsia_mamaria_previa": hp.biopsia_mamaria_previa,
+                "resultado_biopsia": hp.resultado_biopsia or ""
             }
         
         # Converter historia_familiar
