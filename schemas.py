@@ -269,7 +269,6 @@ class TemposDiagnostico(TemposDiagnosticoBase):
 class PacienteBase(BaseModel):
     nome_completo: str
     data_nascimento: Optional[date] = None
-    cpf: Optional[str] = None
     prontuario: Optional[str] = None
     genero: Optional[str] = None
     estado_civil: Optional[str] = None
@@ -362,7 +361,6 @@ class Paciente(PacienteBase):
             paciente_id=obj.paciente_id,
             nome_completo=obj.nome_completo,
             data_nascimento=obj.data_nascimento,
-            cpf=obj.cpf,
             prontuario=obj.prontuario,
             genero=obj.genero,
             estado_civil=obj.estado_civil,

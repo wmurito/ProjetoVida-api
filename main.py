@@ -15,14 +15,12 @@ from mangum import Mangum
 from typing import List, Dict, Any, Tuple
 import exportar
 import os
-import logging
+from secure_logger import get_secure_logger
 from auth import verify_token, get_current_user
 from dashboard import ( get_estadiamento, get_sobrevida_global, get_taxa_recidiva, get_media_delta_t)
 from s3_service import s3_service
-# from security import security_headers, sanitizer
-# Configurar logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Configurar logging seguro
+logger = get_secure_logger(__name__)
 
 # Criar tabelas apenas em desenvolvimento local
 if not os.environ.get('AWS_LAMBDA_FUNCTION_NAME'):
@@ -85,7 +83,17 @@ async def security_middleware(request: Request, call_next):
     client_ip = request.client.host if request.client else "unknown"
     origin = request.headers.get("origin", "")
     
-    # Para requisições OPTIONS (preflight), permitir passagem sem validação de token
+    # Validar CSRF token para requisições que modificam dados
+    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+        csrf_token = request.headers.get("X-CSRF-Token")
+        if not csrf_token or len(csrf_token) != 32:
+            logger.warning("CSRF token inválido ou ausente")
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "CSRF token inválido"}
+            )
+    
+    # Para requisições OPTIONS (preflight), permitir passagem
     if request.method == "OPTIONS":
         # Validar origem para OPTIONS
         if origin and origin not in SAFE_ORIGINS:
@@ -273,7 +281,7 @@ class SecureFileUpload(BaseModel):
     fileName: str
     fileType: str
     fileData: str
-    cpf: str
+    prontuario: str
     
     @validator('fileName')
     def validate_file_name(cls, v):
@@ -343,12 +351,7 @@ class SecureFileUpload(BaseModel):
         
         return v
     
-    @validator('cpf')
-    def validate_cpf(cls, v):
-        # Validação básica de CPF
-        if not v or len(v) < 11:
-            raise ValueError('CPF inválido')
-        return v
+
 
 def validate_session(session_id: str, ip_address: str) -> bool:
     """Valida se a sessão é válida com thread safety"""
@@ -392,42 +395,54 @@ def create_session(ip_address: str) -> str:
 # Rotas protegidas para Paciente
 
 @app.post("/upload-termo-aceite")
-@limiter.limit("5/minute")  # Reduzido para maior segurança
+@limiter.limit("5/minute")
 async def upload_termo_aceite(
-    cpf: str = Form(...),
+    prontuario: str = Form(...),
     termo: UploadFile = File(...),
     request: Request = None,
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Endpoint para upload do termo de aceite via desktop"""
     try:
-        # Validar CPF
-        if not cpf or len(cpf) < 11:
-            raise HTTPException(status_code=400, detail="CPF inválido")
+        # Validar prontuário
+        if not prontuario or len(prontuario) < 3:
+            raise HTTPException(status_code=400, detail="Prontuário inválido")
         
-        # Validar tipo de arquivo
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
-        if termo.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="Tipo de arquivo não permitido. Use PDF, JPG ou PNG")
+        # Ler conteúdo do arquivo
+        content = await termo.read()
         
         # Validar tamanho (5MB)
-        content = await termo.read()
         if len(content) > 5 * 1024 * 1024:
             raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 5MB")
         
+        # Validar tipo de arquivo pelo conteúdo (magic bytes)
+        if content.startswith(b'%PDF'):
+            file_type = 'application/pdf'
+        elif content.startswith(b'\xff\xd8\xff'):
+            file_type = 'image/jpeg'
+        elif content.startswith(b'\x89PNG\r\n\x1a\n'):
+            file_type = 'image/png'
+        else:
+            raise HTTPException(status_code=400, detail="Tipo de arquivo não permitido. Use PDF, JPG ou PNG")
+        
+        # Validar content-type declarado
+        allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
+        if termo.content_type not in allowed_types:
+            raise HTTPException(status_code=400, detail="Content-Type não permitido")
+        
         # Salvar no S3
-        termo_key = f"termos/{cpf}/termo_aceite.pdf"
+        termo_key = f"termos/{prontuario}/termo_aceite.pdf"
         s3_service.s3_client.put_object(
             Bucket=s3_service.bucket,
             Key=termo_key,
             Body=content,
-            ContentType=termo.content_type,
+            ContentType=file_type,
             ServerSideEncryption='AES256',
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3 para CPF: {cpf[:3]}***")
-        return {"success": True, "message": "Termo de aceite enviado com sucesso", "cpf": cpf}
+        logger.info(f"Termo salvo no S3 para prontuário: {prontuario}")
+        return {"success": True, "message": "Termo de aceite enviado com sucesso", "prontuario": prontuario}
         
     except HTTPException:
         raise
@@ -441,18 +456,6 @@ async def create_paciente(
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    # Verificar se termo foi enviado (temporariamente desabilitado devido à coluna CPF)
-    # cpf = paciente.cpf
-    # if not cpf:
-    #     raise HTTPException(status_code=400, detail="CPF é obrigatório")
-    
-    # Verificar se termo existe no S3 (temporariamente desabilitado)
-    # termo_key = f"termos/{cpf}/termo_aceite.pdf"
-    # try:
-    #     s3_service.s3_client.head_object(Bucket=s3_service.bucket, Key=termo_key)
-    # except:
-    #     raise HTTPException(status_code=400, detail="Termo de aceite não encontrado. Envie o termo antes de cadastrar o paciente.")
-    
     return crud.create_paciente(db=db, paciente=paciente)
 
 @app.get("/pacientes/", response_model=List[schemas.Paciente])
@@ -595,7 +598,7 @@ async def secure_upload_mobile(
         # Salvar termo definitivo no S3
         header, data = file_data.fileData.split(',', 1)
         file_content = base64.b64decode(data)
-        termo_key = f"termos/{file_data.cpf}/termo_aceite.pdf"
+        termo_key = f"termos/{file_data.prontuario}/termo_aceite.pdf"
         
         s3_service.s3_client.put_object(
             Bucket=s3_service.bucket,
@@ -606,9 +609,9 @@ async def secure_upload_mobile(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3 para CPF: {file_data.cpf[:3]}***")
+        logger.info(f"Termo salvo no S3 para prontuário: {file_data.prontuario}")
         
-        return {"success": True, "message": "Arquivo recebido com sucesso", "cpf": file_data.cpf}
+        return {"success": True, "message": "Arquivo recebido com sucesso", "prontuario": file_data.prontuario}
         
     except HTTPException:
         raise
