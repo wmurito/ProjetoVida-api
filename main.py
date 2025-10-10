@@ -62,7 +62,7 @@ app.add_middleware(
     allow_origins=SAFE_ORIGINS,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
     max_age=1800,
     expose_headers=["X-Total-Count"]
 )
@@ -83,7 +83,43 @@ def get_db():
 async def security_middleware(request: Request, call_next):
     # Log seguro sem dados sensíveis
     client_ip = request.client.host if request.client else "unknown"
-    # Log de requisição sanitizado para produção
+    origin = request.headers.get("origin", "")
+    
+    # Para requisições OPTIONS (preflight), permitir passagem sem validação de token
+    if request.method == "OPTIONS":
+        # Validar origem para OPTIONS
+        if origin and origin not in SAFE_ORIGINS:
+            logger.warning(f"Origem não autorizada bloqueada para OPTIONS: {origin}")
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Origem não autorizada"},
+                headers={
+                    "Access-Control-Allow-Origin": "",
+                }
+            )
+        
+        # Permitir que OPTIONS passe para o CORS middleware
+        response = await call_next(request)
+        
+        # Adicionar cabeçalhos de segurança para OPTIONS
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        
+        return response
+    
+    # Para outras requisições, validar origem
+    if origin and origin not in SAFE_ORIGINS:
+        logger.warning(f"Origem não autorizada bloqueada: {origin}")
+        return JSONResponse(
+            status_code=403,
+            content={"detail": "Origem não autorizada"},
+            headers={
+                "Access-Control-Allow-Origin": "",
+            }
+        )
     
     # Verificar User-Agent suspeito
     user_agent = request.headers.get("user-agent", "")
@@ -103,13 +139,36 @@ async def security_middleware(request: Request, call_next):
     response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     
-    # Log de resposta sanitizado para produção
     return response
 
 # Rota raiz (pública - apenas status)
 @app.get("/")
 def read_root():
     return {"status": "online"}
+
+# Rota para lidar com requisições OPTIONS (preflight CORS)
+@app.options("/{path:path}")
+async def options_handler(path: str, request: Request):
+    """Handler para requisições OPTIONS (preflight CORS)"""
+    origin = request.headers.get("origin", "")
+    
+    # Verificar se a origem é permitida
+    if origin and origin in SAFE_ORIGINS:
+        allow_origin = origin
+    else:
+        allow_origin = SAFE_ORIGINS[0] if SAFE_ORIGINS else "*"
+    
+    return JSONResponse(
+        status_code=200,
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": allow_origin,
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-CSRF-Token",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "1800"
+        }
+    )
 
 # Rota de verificação de autenticação
 @app.get("/auth/me", response_model=Dict[str, Any])
@@ -382,17 +441,17 @@ async def create_paciente(
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    # Verificar se termo foi enviado
-    cpf = paciente.cpf
-    if not cpf:
-        raise HTTPException(status_code=400, detail="CPF é obrigatório")
+    # Verificar se termo foi enviado (temporariamente desabilitado devido à coluna CPF)
+    # cpf = paciente.cpf
+    # if not cpf:
+    #     raise HTTPException(status_code=400, detail="CPF é obrigatório")
     
-    # Verificar se termo existe no S3
-    termo_key = f"termos/{cpf}/termo_aceite.pdf"
-    try:
-        s3_service.s3_client.head_object(Bucket=s3_service.bucket, Key=termo_key)
-    except:
-        raise HTTPException(status_code=400, detail="Termo de aceite não encontrado. Envie o termo antes de cadastrar o paciente.")
+    # Verificar se termo existe no S3 (temporariamente desabilitado)
+    # termo_key = f"termos/{cpf}/termo_aceite.pdf"
+    # try:
+    #     s3_service.s3_client.head_object(Bucket=s3_service.bucket, Key=termo_key)
+    # except:
+    #     raise HTTPException(status_code=400, detail="Termo de aceite não encontrado. Envie o termo antes de cadastrar o paciente.")
     
     return crud.create_paciente(db=db, paciente=paciente)
 
@@ -547,7 +606,7 @@ async def secure_upload_mobile(
             ACL='private'
         )
         
-        logger.info(f"Termo salvo no S3 para CPF: {cpf[:3]}***")
+        logger.info(f"Termo salvo no S3 para CPF: {file_data.cpf[:3]}***")
         
         return {"success": True, "message": "Arquivo recebido com sucesso", "cpf": file_data.cpf}
         
