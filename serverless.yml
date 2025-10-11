@@ -112,3 +112,4 @@ package:
     - '!.DS_Store'
     - '!Thumbs.db'
     - '!cleanup.ps1'
+    - '!migrate_to_postgresql.py'

@@ -8,93 +8,115 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
     
     # Criar paciente principal
     db_paciente = models.Paciente(**paciente.dict(exclude={
-        "historia_patologica", "historia_familiar", "familiares", "habitos_vida", "paridade",
-        "historia_doenca", "modelos_preditores", "tratamento", "desfecho", "tempos_diagnostico"
+        "familiares", "tratamento", "desfecho"
     }))
     db.add(db_paciente)
     db.flush()
     
-    # História Patológica - estrutura achatada
-    if paciente.historia_patologica:
-        db_hist_pat = models.HistoriaPatologica(
-            **paciente.historia_patologica.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_hist_pat)
-    
-    # História Familiar
-    if paciente.historia_familiar:
-        db_hist_fam = models.HistoriaFamiliar(
-            paciente_id=db_paciente.paciente_id,
-            cancer_familia=paciente.historia_familiar.cancer_familia,
-            observacoes=paciente.historia_familiar.observacoes
-        )
-        db.add(db_hist_fam)
-    
     # Familiares
     if paciente.familiares:
-        for familiar in paciente.familiares:
-            db_familiar = models.Familiar(
-                **familiar.dict(),
-                paciente_id=db_paciente.paciente_id
+        for familiar_data in paciente.familiares:
+            db_familiar = models.PacienteFamiliar(
+                **familiar_data.dict(),
+                id_paciente=db_paciente.id_paciente
             )
             db.add(db_familiar)
-    
-    # Hábitos de Vida
-    if paciente.habitos_vida:
-        db_habitos = models.HabitosVida(
-            **paciente.habitos_vida.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_habitos)
-    
-    # Paridade
-    if paciente.paridade:
-        db_paridade = models.Paridade(
-            **paciente.paridade.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_paridade)
-    
-    # História da Doença
-    if paciente.historia_doenca:
-        db_hist_doenca = models.HistoriaDoenca(
-            **paciente.historia_doenca.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_hist_doenca)
-    
-    # Modelos Preditores
-    if paciente.modelos_preditores:
-        db_modelos = models.ModelosPreditores(
-            **paciente.modelos_preditores.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_modelos)
     
     # Tratamento
     if paciente.tratamento:
         db_tratamento = models.Tratamento(
-            **paciente.tratamento.dict(),
-            paciente_id=db_paciente.paciente_id
+            **paciente.tratamento.dict(exclude={
+                "cirurgias",
+                "quimio_paliativa", "radio_paliativa", "endo_paliativa",
+                "imuno_paliativa", "imunohistoquimicas"
+            }),
+            id_paciente=db_paciente.id_paciente
         )
         db.add(db_tratamento)
+        db.flush()
+        
+        # Cirurgias (Unificadas)
+        if paciente.tratamento.cirurgias:
+            for cirurgia_data in paciente.tratamento.cirurgias:
+                db_cirurgia = models.TratamentoCirurgia(
+                    **cirurgia_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_cirurgia)
+        
+        # Quimioterapia Paliativa
+        if paciente.tratamento.quimio_paliativa:
+            for quimio_data in paciente.tratamento.quimio_paliativa:
+                db_quimio = models.PalliativoQuimioterapia(
+                    **quimio_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_quimio)
+        
+        # Radioterapia Paliativa
+        if paciente.tratamento.radio_paliativa:
+            for radio_data in paciente.tratamento.radio_paliativa:
+                db_radio = models.PalliativoRadioterapia(
+                    **radio_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_radio)
+        
+        # Endocrinoterapia Paliativa
+        if paciente.tratamento.endo_paliativa:
+            for endo_data in paciente.tratamento.endo_paliativa:
+                db_endo = models.PalliativoEndocrinoterapia(
+                    **endo_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_endo)
+        
+        # Imunoterapia Paliativa
+        if paciente.tratamento.imuno_paliativa:
+            for imuno_data in paciente.tratamento.imuno_paliativa:
+                db_imuno = models.PalliativoImunoterapia(
+                    **imuno_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_imuno)
+        
+        # Imunohistoquímicas
+        if paciente.tratamento.imunohistoquimicas:
+            for imunohisto_data in paciente.tratamento.imunohistoquimicas:
+                db_imunohisto = models.Imunohistoquimicas(
+                    **imunohisto_data.dict(),
+                    id_tratamento=db_tratamento.id_tratamento
+                )
+                db.add(db_imunohisto)
     
     # Desfecho
     if paciente.desfecho:
         db_desfecho = models.Desfecho(
-            **paciente.desfecho.dict(),
-            paciente_id=db_paciente.paciente_id
+            **paciente.desfecho.dict(exclude={
+                "metastases", "eventos"
+            }),
+            id_paciente=db_paciente.id_paciente
         )
         db.add(db_desfecho)
-    
-    # Tempos Diagnóstico
-    if paciente.tempos_diagnostico:
-        db_tempos = models.TemposDiagnostico(
-            **paciente.tempos_diagnostico.dict(),
-            paciente_id=db_paciente.paciente_id
-        )
-        db.add(db_tempos)
+        db.flush()
+        
+        # Metástases
+        if paciente.desfecho.metastases:
+            for metastase_data in paciente.desfecho.metastases:
+                db_metastase = models.DesfechoMetastases(
+                    **metastase_data.dict(),
+                    id_desfecho=db_desfecho.id_desfecho
+                )
+                db.add(db_metastase)
+        
+        # Eventos
+        if paciente.desfecho.eventos:
+            for evento_data in paciente.desfecho.eventos:
+                db_evento = models.DesfechoEventos(
+                    **evento_data.dict(),
+                    id_desfecho=db_desfecho.id_desfecho
+                )
+                db.add(db_evento)
     
     db.commit()
     db.refresh(db_paciente)
@@ -102,114 +124,19 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
 
 
 def get_paciente(db: Session, paciente_id: int):
-    """Busca paciente por ID"""
-    try:
-        # Tentar buscar com todas as colunas primeiro
-        return db.query(models.Paciente).filter(
-            models.Paciente.paciente_id == paciente_id
-        ).first()
-    except Exception as e:
-        # Se falhar (provavelmente por coluna CPF não existir), buscar sem CPF
-        from sqlalchemy import text
-        query = text("""
-            SELECT paciente_id, nome_completo, data_nascimento, prontuario, genero, 
-                   estado_civil, cor_etnia, escolaridade, renda_familiar, naturalidade, 
-                   profissao, cep, logradouro, numero, complemento, bairro, cidade, uf, 
-                   telefone, email, altura, peso, imc, idade
-            FROM masto.paciente 
-            WHERE paciente_id = :paciente_id
-        """)
-        result = db.execute(query, {"paciente_id": paciente_id}).fetchone()
-        
-        if result:
-            paciente_data = {
-                "paciente_id": result[0],
-                "nome_completo": result[1],
-                "data_nascimento": result[2],
-                "prontuario": result[3],
-                "genero": result[4],
-                "estado_civil": result[5],
-                "cor_etnia": result[6],
-                "escolaridade": result[7],
-                "renda_familiar": result[8],
-                "naturalidade": result[9],
-                "profissao": result[10],
-                "cep": result[11],
-                "logradouro": result[12],
-                "numero": result[13],
-                "complemento": result[14],
-                "bairro": result[15],
-                "cidade": result[16],
-                "uf": result[17],
-                "telefone": result[18],
-                "email": result[19],
-                "altura": result[20],
-                "peso": result[21],
-                "imc": result[22],
-                "idade": result[23]
-            }
-            return models.Paciente(**paciente_data)
-        
-        return None
+    """Busca paciente por ID com todos os relacionamentos"""
+    return db.query(models.Paciente).filter(
+        models.Paciente.id_paciente == paciente_id
+    ).first()
 
 
 def get_pacientes(db: Session, skip: int = 0, limit: int = 100):
-    """Lista pacientes"""
-    try:
-        # Tentar buscar com todas as colunas primeiro
-        return db.query(models.Paciente).offset(skip).limit(limit).all()
-    except Exception as e:
-        # Se falhar (provavelmente por coluna CPF não existir), buscar sem CPF
-        from sqlalchemy import text
-        query = text("""
-            SELECT paciente_id, nome_completo, data_nascimento, prontuario, genero, 
-                   estado_civil, cor_etnia, escolaridade, renda_familiar, naturalidade, 
-                   profissao, cep, logradouro, numero, complemento, bairro, cidade, uf, 
-                   telefone, email, altura, peso, imc, idade
-            FROM masto.paciente 
-            ORDER BY paciente_id 
-            LIMIT :limit OFFSET :skip
-        """)
-        result = db.execute(query, {"limit": limit, "skip": skip})
-        
-        # Converter resultado para objetos Paciente
-        pacientes = []
-        for row in result:
-            paciente_data = {
-                "paciente_id": row[0],
-                "nome_completo": row[1],
-                "data_nascimento": row[2],
-                "prontuario": row[3],
-                "genero": row[4],
-                "estado_civil": row[5],
-                "cor_etnia": row[6],
-                "escolaridade": row[7],
-                "renda_familiar": row[8],
-                "naturalidade": row[9],
-                "profissao": row[10],
-                "cep": row[11],
-                "logradouro": row[12],
-                "numero": row[13],
-                "complemento": row[14],
-                "bairro": row[15],
-                "cidade": row[16],
-                "uf": row[17],
-                "telefone": row[18],
-                "email": row[19],
-                "altura": row[20],
-                "peso": row[21],
-                "imc": row[22],
-                "idade": row[23]
-            }
-            # Criar objeto Paciente com os dados
-            paciente = models.Paciente(**paciente_data)
-            pacientes.append(paciente)
-        
-        return pacientes
+    """Lista pacientes com paginação"""
+    return db.query(models.Paciente).offset(skip).limit(limit).all()
 
 
 def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCreate):
-    """Atualiza paciente"""
+    """Atualiza paciente e todos os relacionamentos"""
     db_paciente = get_paciente(db, paciente_id)
     if not db_paciente:
         return None
@@ -219,8 +146,7 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
     
     # Atualizar dados principais
     for key, value in paciente.dict(exclude={
-        "historia_patologica", "familiares", "habitos_vida", "paridade",
-        "historia_doenca", "modelos_preditores", "tratamento", "desfecho", "tempos_diagnostico"
+        "familiares", "tratamento", "desfecho"
     }).items():
         setattr(db_paciente, key, value)
     
@@ -233,118 +159,170 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
 
 
 def update_relacionamentos(db: Session, db_paciente, paciente: schemas.PacienteCreate):
-    """Atualiza todos os relacionamentos"""
-    
-    # História Patológica
-    if paciente.historia_patologica:
-        if db_paciente.historia_patologica:
-            for key, value in paciente.historia_patologica.dict().items():
-                setattr(db_paciente.historia_patologica, key, value)
-        else:
-            db_hist = models.HistoriaPatologica(
-                **paciente.historia_patologica.dict(),
-                paciente_id=db_paciente.paciente_id
-            )
-            db.add(db_hist)
+    """Atualiza todos os relacionamentos do paciente"""
     
     # Familiares - remover antigos e adicionar novos
     if paciente.familiares is not None:
         for familiar in db_paciente.familiares:
             db.delete(familiar)
         for familiar_data in paciente.familiares:
-            db_familiar = models.Familiar(
+            db_familiar = models.PacienteFamiliar(
                 **familiar_data.dict(),
-                paciente_id=db_paciente.paciente_id
+                id_paciente=db_paciente.id_paciente
             )
             db.add(db_familiar)
-    
-    # Hábitos de Vida
-    if paciente.habitos_vida:
-        if db_paciente.habitos_vida:
-            for key, value in paciente.habitos_vida.dict().items():
-                setattr(db_paciente.habitos_vida, key, value)
-        else:
-            db_habitos = models.HabitosVida(
-                **paciente.habitos_vida.dict(),
-                paciente_id=db_paciente.paciente_id
-            )
-            db.add(db_habitos)
-    
-    # Paridade
-    if paciente.paridade:
-        if db_paciente.paridade:
-            for key, value in paciente.paridade.dict().items():
-                setattr(db_paciente.paridade, key, value)
-        else:
-            db_paridade = models.Paridade(
-                **paciente.paridade.dict(),
-                paciente_id=db_paciente.paciente_id
-            )
-            db.add(db_paridade)
-    
-    # História da Doença
-    if paciente.historia_doenca:
-        if db_paciente.historia_doenca:
-            for key, value in paciente.historia_doenca.dict().items():
-                setattr(db_paciente.historia_doenca, key, value)
-        else:
-            db_hist = models.HistoriaDoenca(
-                **paciente.historia_doenca.dict(),
-                paciente_id=db_paciente.paciente_id
-            )
-            db.add(db_hist)
-    
-    # Modelos Preditores
-    if paciente.modelos_preditores:
-        if db_paciente.modelos_preditores:
-            for key, value in paciente.modelos_preditores.dict().items():
-                setattr(db_paciente.modelos_preditores, key, value)
-        else:
-            db_modelos = models.ModelosPreditores(
-                **paciente.modelos_preditores.dict(),
-                paciente_id=db_paciente.paciente_id
-            )
-            db.add(db_modelos)
     
     # Tratamento
     if paciente.tratamento:
         if db_paciente.tratamento:
-            for key, value in paciente.tratamento.dict().items():
+            # Atualizar dados principais do tratamento
+            for key, value in paciente.tratamento.dict(exclude={
+                "cirurgias",
+                "quimio_paliativa", "radio_paliativa", "endo_paliativa",
+                "imuno_paliativa", "imunohistoquimicas"
+            }).items():
                 setattr(db_paciente.tratamento, key, value)
+            
+            # Remover relacionamentos antigos
+            for relacionamento in [
+                db_paciente.tratamento.cirurgias,
+                db_paciente.tratamento.quimio_paliativa,
+                db_paciente.tratamento.radio_paliativa,
+                db_paciente.tratamento.endo_paliativa,
+                db_paciente.tratamento.imuno_paliativa,
+                db_paciente.tratamento.imunohistoquimicas
+            ]:
+                for item in relacionamento:
+                    db.delete(item)
         else:
-            db_trat = models.Tratamento(
-                **paciente.tratamento.dict(),
-                paciente_id=db_paciente.paciente_id
+            # Criar novo tratamento
+            db_tratamento = models.Tratamento(
+                **paciente.tratamento.dict(exclude={
+                    "cirurgias",
+                    "quimio_paliativa", "radio_paliativa", "endo_paliativa",
+                    "imuno_paliativa", "imunohistoquimicas"
+                }),
+                id_paciente=db_paciente.id_paciente
             )
-            db.add(db_trat)
+            db.add(db_tratamento)
+            db.flush()
+            db_paciente.tratamento = db_tratamento
+        
+        # Adicionar novos relacionamentos de tratamento
+        add_tratamento_relacionamentos(db, db_paciente.tratamento, paciente.tratamento)
     
     # Desfecho
     if paciente.desfecho:
         if db_paciente.desfecho:
-            for key, value in paciente.desfecho.dict().items():
+            # Atualizar dados principais do desfecho
+            for key, value in paciente.desfecho.dict(exclude={
+                "metastases", "eventos"
+            }).items():
                 setattr(db_paciente.desfecho, key, value)
+            
+            # Remover relacionamentos antigos
+            for metastase in db_paciente.desfecho.metastases:
+                db.delete(metastase)
+            for evento in db_paciente.desfecho.eventos:
+                db.delete(evento)
         else:
-            db_desf = models.Desfecho(
-                **paciente.desfecho.dict(),
-                paciente_id=db_paciente.paciente_id
+            # Criar novo desfecho
+            db_desfecho = models.Desfecho(
+                **paciente.desfecho.dict(exclude={
+                    "metastases", "eventos"
+                }),
+                id_paciente=db_paciente.id_paciente
             )
-            db.add(db_desf)
+            db.add(db_desfecho)
+            db.flush()
+            db_paciente.desfecho = db_desfecho
+        
+        # Adicionar novos relacionamentos de desfecho
+        add_desfecho_relacionamentos(db, db_paciente.desfecho, paciente.desfecho)
+
+
+def add_tratamento_relacionamentos(db: Session, db_tratamento, tratamento_data):
+    """Adiciona relacionamentos de tratamento"""
     
-    # Tempos Diagnóstico
-    if paciente.tempos_diagnostico:
-        if db_paciente.tempos_diagnostico:
-            for key, value in paciente.tempos_diagnostico.dict().items():
-                setattr(db_paciente.tempos_diagnostico, key, value)
-        else:
-            db_tempos = models.TemposDiagnostico(
-                **paciente.tempos_diagnostico.dict(),
-                paciente_id=db_paciente.paciente_id
+    # Cirurgias (Unificadas)
+    if tratamento_data.cirurgias:
+        for cirurgia_data in tratamento_data.cirurgias:
+            db_cirurgia = models.TratamentoCirurgia(
+                **cirurgia_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
             )
-            db.add(db_tempos)
+            db.add(db_cirurgia)
+    
+    # Quimioterapia Paliativa
+    if tratamento_data.quimio_paliativa:
+        for quimio_data in tratamento_data.quimio_paliativa:
+            db_quimio = models.PalliativoQuimioterapia(
+                **quimio_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
+            )
+            db.add(db_quimio)
+    
+    # Radioterapia Paliativa
+    if tratamento_data.radio_paliativa:
+        for radio_data in tratamento_data.radio_paliativa:
+            db_radio = models.PalliativoRadioterapia(
+                **radio_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
+            )
+            db.add(db_radio)
+    
+    # Endocrinoterapia Paliativa
+    if tratamento_data.endo_paliativa:
+        for endo_data in tratamento_data.endo_paliativa:
+            db_endo = models.PalliativoEndocrinoterapia(
+                **endo_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
+            )
+            db.add(db_endo)
+    
+    # Imunoterapia Paliativa
+    if tratamento_data.imuno_paliativa:
+        for imuno_data in tratamento_data.imuno_paliativa:
+            db_imuno = models.PalliativoImunoterapia(
+                **imuno_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
+            )
+            db.add(db_imuno)
+    
+    # Imunohistoquímicas
+    if tratamento_data.imunohistoquimicas:
+        for imunohisto_data in tratamento_data.imunohistoquimicas:
+            db_imunohisto = models.Imunohistoquimicas(
+                **imunohisto_data.dict(),
+                id_tratamento=db_tratamento.id_tratamento
+            )
+            db.add(db_imunohisto)
+
+
+def add_desfecho_relacionamentos(db: Session, db_desfecho, desfecho_data):
+    """Adiciona relacionamentos de desfecho"""
+    
+    # Metástases
+    if desfecho_data.metastases:
+        for metastase_data in desfecho_data.metastases:
+            db_metastase = models.DesfechoMetastases(
+                **metastase_data.dict(),
+                id_desfecho=db_desfecho.id_desfecho
+            )
+            db.add(db_metastase)
+    
+    # Eventos
+    if desfecho_data.eventos:
+        for evento_data in desfecho_data.eventos:
+            db_evento = models.DesfechoEventos(
+                **evento_data.dict(),
+                id_desfecho=db_desfecho.id_desfecho
+            )
+            db.add(db_evento)
 
 
 def delete_paciente(db: Session, paciente_id: int):
-    """Deleta paciente"""
+    """Deleta paciente e todos os relacionamentos (CASCADE)"""
     paciente = get_paciente(db, paciente_id)
     if paciente:
         db.delete(paciente)
@@ -355,12 +333,78 @@ def delete_paciente(db: Session, paciente_id: int):
 def save_historico(db: Session, paciente):
     """Salva histórico de alterações"""
     historico = models.PacienteHistorico(
-        paciente_id=paciente.paciente_id,
+        id_paciente=paciente.id_paciente,
         data_modificacao=datetime.datetime.utcnow(),
         dados_anteriores={
             "nome_completo": paciente.nome_completo,
             "data_nascimento": str(paciente.data_nascimento) if paciente.data_nascimento else None,
+            "genero": paciente.genero,
+            "cidade": paciente.cidade,
+            "uf": paciente.uf
         }
     )
     db.add(historico)
     db.flush()
+
+
+# =======================================================================
+# FUNÇÕES ESPECÍFICAS PARA DASHBOARD
+# =======================================================================
+
+def get_pacientes_por_estadiamento(db: Session):
+    """Retorna contagem de pacientes por estadiamento"""
+    from sqlalchemy import func
+    
+    result = db.query(
+        models.Paciente.hd_estadiamento_clinico,
+        func.count(models.Paciente.id_paciente).label('count')
+    ).group_by(models.Paciente.hd_estadiamento_clinico).all()
+    
+    return [{"estadiamento": r.hd_estadiamento_clinico or "Não informado", "count": r.count} for r in result]
+
+
+def get_pacientes_por_status_vital(db: Session):
+    """Retorna contagem de pacientes por status vital"""
+    from sqlalchemy import func
+    
+    result = db.query(
+        models.Desfecho.status_vital,
+        func.count(models.Desfecho.id_desfecho).label('count')
+    ).group_by(models.Desfecho.status_vital).all()
+    
+    return [{"status": r.status_vital or "Não informado", "count": r.count} for r in result]
+
+
+def get_pacientes_por_recidiva(db: Session):
+    """Retorna contagem de pacientes por recidiva"""
+    from sqlalchemy import func
+    
+    result = db.query(
+        func.count(models.Desfecho.id_desfecho).label('total'),
+        func.sum(func.cast(models.Desfecho.recidiva_local, Integer)).label('recidiva_local'),
+        func.sum(func.cast(models.Desfecho.recidiva_regional, Integer)).label('recidiva_regional'),
+        func.sum(func.cast(models.Desfecho.metastase_ocorreu, Integer)).label('metastase')
+    ).first()
+    
+    return {
+        "total": result.total or 0,
+        "recidiva_local": result.recidiva_local or 0,
+        "recidiva_regional": result.recidiva_regional or 0,
+        "metastase": result.metastase or 0
+    }
+
+
+def get_media_delta_t(db: Session):
+    """Calcula média do tempo entre primeira consulta e diagnóstico"""
+    from sqlalchemy import func, extract
+    
+    result = db.query(
+        func.avg(
+            extract('days', models.Desfecho.td_data_diagnostico - models.Desfecho.td_data_primeira_consulta)
+        ).label('media_dias')
+    ).filter(
+        models.Desfecho.td_data_diagnostico.isnot(None),
+        models.Desfecho.td_data_primeira_consulta.isnot(None)
+    ).first()
+    
+    return {"media_dias": float(result.media_dias) if result.media_dias else 0}

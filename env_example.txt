@@ -1,0 +1,20 @@
+# Configuração do Banco PostgreSQL
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=projetovida
+DB_USER=postgres
+DB_PASSWORD=sua_senha_aqui
+
+# URL completa do banco (será construída automaticamente)
+DATABASE_URL=postgresql://postgres:sua_senha_aqui@localhost:5432/projetovida
+
+# Configurações de CORS
+ALLOWED_ORIGINS=http://localhost:5173,http://192.168.2.101:5173,https://master.d1yi28nqqe44f2.amplifyapp.com
+
+# Configurações AWS (para produção)
+AWS_LAMBDA_FUNCTION_NAME=
+DB_SECRET_NAME=projeto-vida/database
+
+# Configurações de Segurança
+JWT_SECRET_KEY=sua_chave_secreta_jwt_aqui
+CSRF_SECRET_KEY=sua_chave_csrf_aqui

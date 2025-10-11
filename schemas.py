@@ -2,231 +2,298 @@ from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import date, datetime
 
-# Historia Patologica
-class HistoriaPatologicaBase(BaseModel):
-    # Comorbidades - Estrutura achatada conforme frontend
-    has: Optional[bool] = False
-    diabetes: Optional[bool] = False
-    hipertensao: Optional[bool] = False
-    hipotireoidismo: Optional[bool] = False
-    ansiedade: Optional[bool] = False
-    depressao: Optional[bool] = False
-    doenca_cardiaca: Optional[bool] = False
-    doenca_renal: Optional[bool] = False
-    doenca_pulmonar: Optional[bool] = False
-    doenca_figado: Optional[bool] = False
-    avc: Optional[bool] = False
-    outra: Optional[str] = ""
-    
-    # Neoplasia prévia - Estrutura achatada conforme frontend
-    neoplasia_previa: Optional[bool] = False
-    qual_neoplasia: Optional[str] = ""
-    idade_diagnostico_neoplasia: Optional[str] = ""
-    
-    # Biópsia mamária prévia - Estrutura achatada conforme frontend
-    biopsia_mamaria_previa: Optional[bool] = False
-    resultado_biopsia: Optional[str] = ""
-
-class HistoriaPatologicaCreate(HistoriaPatologicaBase):
-    pass
-
-class HistoriaPatologica(HistoriaPatologicaBase):
-    id: int
-    paciente_id: int
-    
-    class Config:
-        from_attributes = True
-
-# Familiar
-class HistoriaFamiliarBase(BaseModel):
-    cancer_familia: Optional[bool] = False
-    observacoes: Optional[str] = ""
-
-class HistoriaFamiliarCreate(HistoriaFamiliarBase):
-    pass
-
-class HistoriaFamiliar(HistoriaFamiliarBase):
-    id: int
-    paciente_id: int
-
-    class Config:
-        from_attributes = True
-
+# =======================================================================
+# SCHEMAS PARA FAMILIARES
+# =======================================================================
 
 class FamiliarBase(BaseModel):
+    nome: Optional[str] = None
     parentesco: Optional[str] = None
-    tipo_cancer: Optional[str] = None
-    idade_diagnostico: Optional[int] = None
+    
+    # CAMPOS DETALHADOS (CORRIGIDO)
+    genero: Optional[str] = None
+    tem_cancer_mama: Optional[bool] = False
+    idade_cancer_mama: Optional[str] = None
+    bilateral: Optional[bool] = False
+    idade_segunda_mama: Optional[str] = None
+    tem_cancer_ovario: Optional[bool] = False
+    idade_cancer_ovario: Optional[str] = None
+    gene_brca: Optional[str] = None
+    tipo_cancer_outros: Optional[str] = None
 
 class FamiliarCreate(FamiliarBase):
     pass
 
 class Familiar(FamiliarBase):
-    id: int
-    paciente_id: int
+    id_familiar: int
+    id_paciente: int
     
     class Config:
         from_attributes = True
 
-# Habitos de Vida
-class HabitosVidaBase(BaseModel):
-    tabagismo: Optional[str] = "nao"
-    tabagismo_carga: Optional[str] = ""  # String conforme frontend
-    tabagismo_tempo_anos: Optional[str] = ""  # String conforme frontend
-    etilismo: Optional[str] = "nao"
-    etilismo_tempo_anos: Optional[str] = ""  # String conforme frontend
-    etilismo_dose_diaria: Optional[str] = ""
-    atividade_fisica: Optional[str] = "nao"
-    tipo_atividade: Optional[str] = ""  # String conforme frontend
-    tempo_atividade_semanal_min: Optional[str] = ""  # String conforme frontend
+# =======================================================================
+# SCHEMAS PARA TRATAMENTO - CIRURGIAS (UNIFICADAS)
+# =======================================================================
 
-class HabitosVidaCreate(HabitosVidaBase):
+class CirurgiaBase(BaseModel):
+    tipo_procedimento: Optional[str] = None  # mama, axila, reconstrucao
+    procedimento: Optional[str] = None
+    data_cirurgia: Optional[date] = None
+
+class CirurgiaCreate(CirurgiaBase):
     pass
 
-class HabitosVida(HabitosVidaBase):
-    id: int
-    paciente_id: int
+class Cirurgia(CirurgiaBase):
+    id_cirurgia: int
+    id_tratamento: int
     
     class Config:
         from_attributes = True
 
-# Paridade
-class ParidadeBase(BaseModel):
-    gesta: Optional[str] = ""  # String conforme frontend
-    para: Optional[str] = ""  # String conforme frontend
-    aborto: Optional[str] = ""  # String conforme frontend
-    teve_filhos: Optional[bool] = False
-    idade_primeiro_filho: Optional[str] = ""  # String conforme frontend
-    amamentou: Optional[bool] = False
-    tempo_amamentacao_meses: Optional[str] = ""  # String conforme frontend
-    menarca_idade: Optional[str] = ""  # String conforme frontend
-    menopausa: Optional[str] = "nao"
-    idade_menopausa: Optional[str] = ""  # String conforme frontend
-    uso_trh: Optional[bool] = False  # Corrigido para 'uso_trh' conforme frontend
-    tempo_uso_trh: Optional[str] = ""  # String conforme frontend
-    uso_aco: Optional[bool] = False
-    tempo_uso_aco: Optional[str] = ""  # String conforme frontend
+# =======================================================================
+# SCHEMAS PARA TRATAMENTO - TERAPIAS PALIATIVAS
+# =======================================================================
 
-class ParidadeCreate(ParidadeBase):
+class PalliativoQuimioterapiaBase(BaseModel):
+    data_inicio: Optional[date] = None
+    data_termino: Optional[date] = None
+    sitio: Optional[str] = None  # CORRIGIDO: Campo 'sitio' faltante no ORM original
+    esquema: Optional[str] = None
+    intercorrencias: Optional[str] = None
+
+class PalliativoQuimioterapiaCreate(PalliativoQuimioterapiaBase):
     pass
 
-class Paridade(ParidadeBase):
-    id: int
-    paciente_id: int
+class PalliativoQuimioterapia(PalliativoQuimioterapiaBase):
+    id_quimio_paliativa: int
+    id_tratamento: int
     
     class Config:
         from_attributes = True
 
-# Historia Doenca
-class HistoriaDoencaBase(BaseModel):
-    sinal_sintoma_principal: Optional[str] = None
-    outro_sinal_sintoma: Optional[str] = None
-    data_sintomas: Optional[date] = None
-    idade_diagnostico: Optional[int] = None
-    ecog: Optional[str] = None
-    lado_acometido: Optional[str] = None
-    tamanho_tumoral_clinico: Optional[float] = None
-    linfonodos_palpaveis: Optional[str] = "nao"
-    estadiamento_clinico: Optional[str] = None
-    metastase_distancia: Optional[bool] = False
-    locais_metastase: Optional[str] = None
+class PalliativoRadioterapiaBase(BaseModel):
+    data_inicio: Optional[date] = None
+    data_termino: Optional[date] = None
+    esquema: Optional[str] = None
+    intercorrencias: Optional[str] = None
 
-class HistoriaDoencaCreate(HistoriaDoencaBase):
+class PalliativoRadioterapiaCreate(PalliativoRadioterapiaBase):
     pass
 
-class HistoriaDoenca(HistoriaDoencaBase):
-    id: int
-    paciente_id: int
+class PalliativoRadioterapia(PalliativoRadioterapiaBase):
+    id_radio_paliativa: int
+    id_tratamento: int
     
     class Config:
         from_attributes = True
 
-# Modelos Preditores
-class ModelosPreditoresBase(BaseModel):
-    score_tyrer_cuzick: Optional[str] = ""  # String conforme JSON correto
-    score_canrisk: Optional[str] = ""  # String conforme JSON correto
-    score_gail: Optional[str] = ""  # String conforme JSON correto
+class PalliativoEndocrinoterapiaBase(BaseModel):
+    data_inicio: Optional[date] = None
+    data_termino: Optional[date] = None
+    esquema: Optional[str] = None
+    intercorrencias: Optional[str] = None
 
-class ModelosPreditoresCreate(ModelosPreditoresBase):
+class PalliativoEndocrinoterapiaCreate(PalliativoEndocrinoterapiaBase):
     pass
 
-class ModelosPreditores(ModelosPreditoresBase):
-    id: int
-    paciente_id: int
+class PalliativoEndocrinoterapia(PalliativoEndocrinoterapiaBase):
+    id_endo_paliativa: int
+    id_tratamento: int
     
     class Config:
         from_attributes = True
 
-# Tratamento
+class PalliativoImunoterapiaBase(BaseModel):
+    data_inicio: Optional[date] = None
+    data_termino: Optional[date] = None
+    esquema: Optional[str] = None
+    intercorrencias: Optional[str] = None
+
+class PalliativoImunoterapiaCreate(PalliativoImunoterapiaBase):
+    pass
+
+class PalliativoImunoterapia(PalliativoImunoterapiaBase):
+    id_imuno_paliativa: int
+    id_tratamento: int
+    
+    class Config:
+        from_attributes = True
+
+# =======================================================================
+# SCHEMAS PARA IMUNOHISTOQUÍMICAS
+# =======================================================================
+
+class ImunohistoquimicaBase(BaseModel):
+    # CAMPOS COMPLETOS (CORRIGIDO)
+    tipo: Optional[str] = None
+    especime: Optional[str] = None
+    data_realizacao: Optional[date] = None
+    re: Optional[str] = None
+    rp: Optional[str] = None
+    ki67: Optional[str] = None
+    her2: Optional[str] = None
+    fish: Optional[str] = None
+    outras_informacoes: Optional[str] = None
+
+class ImunohistoquimicaCreate(ImunohistoquimicaBase):
+    pass
+
+class Imunohistoquimica(ImunohistoquimicaBase):
+    id_imunohistoquimica: int
+    id_tratamento: int
+    
+    class Config:
+        from_attributes = True
+
+# =======================================================================
+# SCHEMAS PARA TRATAMENTO
+# =======================================================================
+
 class TratamentoBase(BaseModel):
-    cirurgia: Optional[dict] = {
-        "contexto_cirurgico": "",
-        "mamas": [],
-        "axilas": [],
-        "reconstrucoes": []
-    }
-    quimioterapia: Optional[dict] = {
-        "neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "paliativa": []
-    }
-    radioterapia: Optional[dict] = {
-        "neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "paliativa": []
-    }
-    endocrinoterapia: Optional[dict] = {
-        "neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "paliativa": []
-    }
-    imunoterapia: Optional[dict] = {
-        "neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""},
-        "paliativa": []
-    }
-    imunohistoquimicas: Optional[list] = []
-    core_biopsy: Optional[dict] = {
-        "realizada": False,
-        "data": "",
-        "especime": "",
-        "tecnica": "",
-        "tipo_lesao": "",
-        "anatomopatologico": "",
-        "tipo_histologico": ""
-    }
-    mamotomia: Optional[dict] = {
-        "realizada": False,
-        "data": "",
-        "especime": "",
-        "tecnica": "",
-        "tipo_lesao": "",
-        "anatomopatologico": "",
-        "tipo_histologico": ""
-    }
-    paaf: Optional[dict] = {
-        "realizada": False,
-        "data": "",
-        "especime": "",
-        "tecnica": "",
-        "achados": ""
-    }
+    # CIRURGIA
+    t_cirurgia_contexto_cirurgico: Optional[str] = None
+    
+    # QUIMIOTERAPIA NEADJUVANTE
+    qt_neoadj_data_inicio: Optional[date] = None
+    qt_neoadj_data_termino: Optional[date] = None
+    qt_neoadj_esquema: Optional[str] = None
+    qt_neoadj_intercorrencias: Optional[str] = None
+    
+    # QUIMIOTERAPIA ADJUVANTE
+    qt_adj_data_inicio: Optional[date] = None
+    qt_adj_data_termino: Optional[date] = None
+    qt_adj_esquema: Optional[str] = None
+    qt_adj_intercorrencias: Optional[str] = None
+    
+    # RADIOTERAPIA NEADJUVANTE
+    rt_neoadj_data_inicio: Optional[date] = None
+    rt_neoadj_data_termino: Optional[date] = None
+    rt_neoadj_esquema: Optional[str] = None
+    rt_neoadj_intercorrencias: Optional[str] = None
+    
+    # RADIOTERAPIA ADJUVANTE
+    rt_adj_data_inicio: Optional[date] = None
+    rt_adj_data_termino: Optional[date] = None
+    rt_adj_esquema: Optional[str] = None
+    rt_adj_intercorrencias: Optional[str] = None
+    
+    # ENDOCRINOTERAPIA NEADJUVANTE (CORRIGIDO prefixo de et_ para endo_)
+    endo_neoadj_data_inicio: Optional[date] = None
+    endo_neoadj_data_termino: Optional[date] = None
+    endo_neoadj_esquema: Optional[str] = None
+    endo_neoadj_intercorrencias: Optional[str] = None
+    
+    # ENDOCRINOTERAPIA ADJUVANTE (CORRIGIDO prefixo de et_ para endo_)
+    endo_adj_data_inicio: Optional[date] = None
+    endo_adj_data_termino: Optional[date] = None
+    endo_adj_esquema: Optional[str] = None
+    endo_adj_intercorrencias: Optional[str] = None
+    
+    # IMUNOTERAPIA NEADJUVANTE (CORRIGIDO prefixo de it_ para imuno_)
+    imuno_neoadj_data_inicio: Optional[date] = None
+    imuno_neoadj_data_termino: Optional[date] = None
+    imuno_neoadj_esquema: Optional[str] = None
+    imuno_neoadj_intercorrencias: Optional[str] = None
+    
+    # IMUNOTERAPIA ADJUVANTE (CORRIGIDO prefixo de it_ para imuno_)
+    imuno_adj_data_inicio: Optional[date] = None
+    imuno_adj_data_termino: Optional[date] = None
+    imuno_adj_esquema: Optional[str] = None
+    imuno_adj_intercorrencias: Optional[str] = None
+
+    # CORE BIOPSY
+    t_core_biopsy_realizada: Optional[bool] = False
+    t_core_biopsy_data: Optional[date] = None
+    t_core_biopsy_especime: Optional[str] = None
+    t_core_biopsy_tecnica: Optional[str] = None
+    t_core_biopsy_tipo_lesao: Optional[str] = None
+    t_core_biopsy_anatomopatologico: Optional[str] = None
+    t_core_biopsy_tipo_histologico: Optional[str] = None
+    
+    # MAMOTOMIA
+    t_mamotomia_realizada: Optional[bool] = False
+    t_mamotomia_data: Optional[date] = None
+    t_mamotomia_especime: Optional[str] = None
+    t_mamotomia_tecnica: Optional[str] = None
+    t_mamotomia_tipo_lesao: Optional[str] = None
+    t_mamotomia_anatomopatologico: Optional[str] = None
+    t_mamotomia_tipo_histologico: Optional[str] = None
+    
+    # PAAF
+    t_paaf_realizada: Optional[bool] = False
+    t_paaf_data: Optional[date] = None
+    t_paaf_especime: Optional[str] = None
+    t_paaf_tecnica: Optional[str] = None
+    t_paaf_achados: Optional[str] = None
 
 class TratamentoCreate(TratamentoBase):
-    pass
+    # Relacionamentos 1:N (Simplificados para a melhor prática com 1 Tabela de Cirurgia)
+    cirurgias: Optional[List[CirurgiaCreate]] = []
+    quimio_paliativa: Optional[List[PalliativoQuimioterapiaCreate]] = []
+    radio_paliativa: Optional[List[PalliativoRadioterapiaCreate]] = []
+    endo_paliativa: Optional[List[PalliativoEndocrinoterapiaCreate]] = []
+    imuno_paliativa: Optional[List[PalliativoImunoterapiaCreate]] = []
+    imunohistoquimicas: Optional[List[ImunohistoquimicaCreate]] = []
 
 class Tratamento(TratamentoBase):
-    id: int
-    paciente_id: int
+    id_tratamento: int
+    id_paciente: int
+    
+    # Relacionamentos 1:N (Simplificados para a melhor prática com 1 Tabela de Cirurgia)
+    cirurgias: Optional[List[Cirurgia]] = []
+    quimio_paliativa: Optional[List[PalliativoQuimioterapia]] = []
+    radio_paliativa: Optional[List[PalliativoRadioterapia]] = []
+    endo_paliativa: Optional[List[PalliativoEndocrinoterapia]] = []
+    imuno_paliativa: Optional[List[PalliativoImunoterapia]] = []
+    imunohistoquimicas: Optional[List[Imunohistoquimica]] = []
     
     class Config:
         from_attributes = True
 
-# Desfecho
+# =======================================================================
+# SCHEMAS PARA DESFECHO - METÁSTASES E EVENTOS
+# =======================================================================
+
+class MetastaseBase(BaseModel):
+    local: Optional[str] = None
+
+class MetastaseCreate(MetastaseBase):
+    pass
+
+class Metastase(MetastaseBase):
+    id_desfecho_metastase: int
+    id_desfecho: int
+    
+    class Config:
+        from_attributes = True
+
+class EventoBase(BaseModel):
+    data: Optional[date] = None
+    titulo: Optional[str] = None
+    descricao: Optional[str] = None
+
+class EventoCreate(EventoBase):
+    pass
+
+class Evento(EventoBase):
+    id_evento: int
+    id_desfecho: int
+    
+    class Config:
+        from_attributes = True
+
+# =======================================================================
+# SCHEMAS PARA DESFECHO
+# =======================================================================
+
 class DesfechoBase(BaseModel):
+    # STATUS VITAL
     status_vital: Optional[str] = None
+    morte: Optional[bool] = False  # CORRIGIDO: Campo faltante no ORM
     data_morte: Optional[date] = None
     causa_morte: Optional[str] = None
+    
+    # RECIDIVA / METÁSTASE
     recidiva_local: Optional[bool] = False
     data_recidiva_local: Optional[date] = None
     cirurgia_recidiva_local: Optional[str] = None
@@ -234,40 +301,37 @@ class DesfechoBase(BaseModel):
     data_recidiva_regional: Optional[date] = None
     cirurgia_recidiva_regional: Optional[str] = None
     metastase_ocorreu: Optional[bool] = False
-    metastases: Optional[list] = None
+
+    # TEMPOS DE DIAGNÓSTICO (TD)
+    td_data_primeira_consulta: Optional[date] = None
+    td_data_diagnostico: Optional[date] = None
+    td_data_inicio_tratamento: Optional[date] = None
+    td_data_cirurgia: Optional[date] = None
 
 class DesfechoCreate(DesfechoBase):
-    pass
+    # Relacionamentos 1:N
+    metastases: Optional[List[MetastaseCreate]] = []
+    eventos: Optional[List[EventoCreate]] = []
 
 class Desfecho(DesfechoBase):
-    id: int
-    paciente_id: int
+    id_desfecho: int
+    id_paciente: int
+    
+    # Relacionamentos 1:N
+    metastases: Optional[List[Metastase]] = []
+    eventos: Optional[List[Evento]] = []
     
     class Config:
         from_attributes = True
 
-# Tempos Diagnostico
-class TemposDiagnosticoBase(BaseModel):
-    data_primeira_consulta: Optional[date] = None
-    data_diagnostico: Optional[date] = None
-    data_inicio_tratamento: Optional[date] = None
-    data_cirurgia: Optional[date] = None
-    eventos: Optional[list] = None
+# =======================================================================
+# SCHEMAS PARA PACIENTE
+# =======================================================================
 
-class TemposDiagnosticoCreate(TemposDiagnosticoBase):
-    pass
-
-class TemposDiagnostico(TemposDiagnosticoBase):
-    id: int
-    paciente_id: int
-    
-    class Config:
-        from_attributes = True
-
-# Paciente
 class PacienteBase(BaseModel):
+    # DADOS PESSOAIS E ENDEREÇO
     nome_completo: str
-    data_nascimento: Optional[date] = None
+    data_nascimento: date
     genero: Optional[str] = None
     estado_civil: Optional[str] = None
     cor_etnia: Optional[str] = None
@@ -282,122 +346,110 @@ class PacienteBase(BaseModel):
     cidade: Optional[str] = None
     uf: Optional[str] = None
     telefone: Optional[str] = None
+    
+    # DADOS FÍSICOS
     altura: Optional[float] = None
     peso: Optional[float] = None
     imc: Optional[float] = None
     idade: Optional[int] = None
 
+    # HISTÓRIA PATOLÓGICA (HP)
+    hp_has: Optional[bool] = False
+    hp_diabetes: Optional[bool] = False
+    hp_hipertensao: Optional[bool] = False
+    hp_hipotireoidismo: Optional[bool] = False
+    hp_ansiedade: Optional[bool] = False
+    hp_depressao: Optional[bool] = False
+    hp_doenca_cardiaca: Optional[bool] = False
+    hp_doenca_renal: Optional[bool] = False
+    hp_doenca_pulmonar: Optional[bool] = False
+    hp_doenca_figado: Optional[bool] = False
+    hp_avc: Optional[bool] = False
+    hp_outra: Optional[str] = None
+    hp_neoplasia_previa: Optional[bool] = False
+    hp_qual_neoplasia: Optional[str] = None
+    hp_idade_diagnostico_neoplasia: Optional[str] = None
+    hp_biopsia_mamaria_previa: Optional[bool] = False
+    hp_resultado_biopsia: Optional[str] = None
+
+    # HISTÓRIA FAMILIAR (HF)
+    hf_cancer_familia: Optional[bool] = False
+    hf_observacoes: Optional[str] = None
+
+    # HÁBITOS DE VIDA (HV)
+    hv_tabagismo: Optional[str] = None
+    hv_tabagismo_carga: Optional[str] = None
+    hv_tabagismo_tempo_anos: Optional[str] = None
+    hv_etilismo: Optional[str] = None
+    hv_etilismo_tempo_anos: Optional[str] = None
+    hv_etilismo_dose_diaria: Optional[str] = None
+    hv_atividade_fisica: Optional[str] = None
+    hv_tipo_atividade: Optional[str] = None
+    hv_tempo_atividade_semanal_min: Optional[str] = None
+    
+    # PARIDADE (P)
+    p_gesta: Optional[str] = None
+    p_para: Optional[str] = None
+    p_aborto: Optional[str] = None
+    p_teve_filhos: Optional[bool] = False
+    p_idade_primeiro_filho: Optional[str] = None
+    p_amamentou: Optional[bool] = False
+    p_tempo_amamentacao_meses: Optional[str] = None
+    p_menarca_idade: Optional[str] = None
+    p_menopausa: Optional[str] = None
+    p_idade_menopausa: Optional[str] = None
+    p_uso_trh: Optional[bool] = False
+    p_tempo_uso_trh: Optional[str] = None
+    p_tipo_terapia: Optional[str] = None  # CORRIGIDO: Campo faltante no ORM original
+    p_uso_aco: Optional[bool] = False
+    p_tempo_uso_aco: Optional[str] = None
+
+    # HISTÓRIA DA DOENÇA (HD)
+    hd_sinal_sintoma_principal: str
+    hd_outro_sinal_sintoma: Optional[str] = None
+    hd_data_sintomas: date
+    hd_idade_diagnostico: int
+    hd_ecog: Optional[str] = None
+    hd_lado_acometido: str
+    hd_tamanho_tumoral_clinico: Optional[float] = None
+    hd_linfonodos_palpaveis: Optional[str] = None
+    hd_estadiamento_clinico: Optional[str] = None
+    hd_metastase_distancia: Optional[bool] = False
+    hd_locais_metastase: Optional[str] = None
+
+    # MODELOS PREDITORES (MP)
+    mp_score_tyrer_cuzick: Optional[str] = None
+    mp_score_canrisk: Optional[str] = None
+    mp_score_gail: Optional[str] = None
+
 class PacienteCreate(PacienteBase):
-    historia_patologica: Optional[HistoriaPatologicaCreate] = None
-    historia_familiar: Optional[HistoriaFamiliarCreate] = None
+    # Relacionamentos 1:N
     familiares: Optional[List[FamiliarCreate]] = []
-    habitos_vida: Optional[HabitosVidaCreate] = None
-    paridade: Optional[ParidadeCreate] = None
-    historia_doenca: Optional[HistoriaDoencaCreate] = None
-    modelos_preditores: Optional[ModelosPreditoresCreate] = None
+    
+    # Relacionamentos 1:1
     tratamento: Optional[TratamentoCreate] = None
     desfecho: Optional[DesfechoCreate] = None
-    tempos_diagnostico: Optional[TemposDiagnosticoCreate] = None
 
 class Paciente(PacienteBase):
-    paciente_id: int
-    historia_patologica: Optional[dict] = None
-    historia_familiar: Optional[dict] = None
-    familiares: Optional[List[dict]] = []
-    habitos_vida: Optional[dict] = None
-    paridade: Optional[dict] = None
-    historia_doenca: Optional[dict] = None
-    modelos_preditores: Optional[dict] = None
-    tratamento: Optional[dict] = None
-    desfecho: Optional[dict] = None
-    tempos_diagnostico: Optional[dict] = None
+    id_paciente: int
+    
+    # Relacionamentos 1:N
+    familiares: Optional[List[Familiar]] = []
+    
+    # Relacionamentos 1:1
+    tratamento: Optional[Tratamento] = None
+    desfecho: Optional[Desfecho] = None
     
     class Config:
         from_attributes = True
-        
-    @classmethod
-    def from_orm(cls, obj):
-        # Converter historia_patologica para estrutura achatada
-        hp_dict = None
-        if obj.historia_patologica:
-            hp = obj.historia_patologica
-            hp_dict = {
-                "has": hp.has,
-                "diabetes": hp.diabetes,
-                "hipertensao": hp.hipertensao,
-                "hipotireoidismo": hp.hipotireoidismo,
-                "ansiedade": hp.ansiedade,
-                "depressao": hp.depressao,
-                "doenca_cardiaca": hp.doenca_cardiaca,
-                "doenca_renal": hp.doenca_renal,
-                "doenca_pulmonar": hp.doenca_pulmonar,
-                "doenca_figado": hp.doenca_figado,
-                "avc": hp.avc,
-                "outra": hp.outra or "",
-                "neoplasia_previa": hp.neoplasia_previa,
-                "qual_neoplasia": hp.qual_neoplasia or "",
-                "idade_diagnostico_neoplasia": hp.idade_diagnostico_neoplasia or "",
-                "biopsia_mamaria_previa": hp.biopsia_mamaria_previa,
-                "resultado_biopsia": hp.resultado_biopsia or ""
-            }
-        
-        # Converter historia_familiar
-        hf_dict = None
-        if obj.historia_familiar:
-            hf = obj.historia_familiar
-            hf_dict = {
-                "cancer_familia": hf.cancer_familia,
-                "observacoes": hf.observacoes or ""
-            }
-        
-        return cls(
-            paciente_id=obj.paciente_id,
-            nome_completo=obj.nome_completo,
-            data_nascimento=obj.data_nascimento,
-            genero=obj.genero,
-            estado_civil=obj.estado_civil,
-            cor_etnia=obj.cor_etnia,
-            escolaridade=obj.escolaridade,
-            renda_familiar=obj.renda_familiar,
-            naturalidade=obj.naturalidade,
-            cep=obj.cep,
-            logradouro=obj.logradouro,
-            numero=obj.numero,
-            complemento=obj.complemento,
-            bairro=obj.bairro,
-            cidade=obj.cidade,
-            uf=obj.uf,
-            telefone=obj.telefone,
-            altura=obj.altura,
-            peso=obj.peso,
-            imc=obj.imc,
-            idade=obj.idade,
-            historia_patologica=hp_dict,
-            historia_familiar=hf_dict,
-            familiares=[{"parentesco": f.parentesco, "tipo_cancer": f.tipo_cancer, "idade_diagnostico": f.idade_diagnostico} for f in obj.familiares] if obj.familiares else [],
-            habitos_vida={k: v for k, v in obj.habitos_vida.__dict__.items() if not k.startswith('_')} if obj.habitos_vida else None,
-            paridade={k: v for k, v in obj.paridade.__dict__.items() if not k.startswith('_')} if obj.paridade else None,
-            historia_doenca={k: v for k, v in obj.historia_doenca.__dict__.items() if not k.startswith('_')} if obj.historia_doenca else None,
-            modelos_preditores={k: v for k, v in obj.modelos_preditores.__dict__.items() if not k.startswith('_')} if obj.modelos_preditores else None,
-            tratamento={
-                "cirurgia": obj.tratamento.cirurgia or {"contexto_cirurgico": "", "mamas": [], "axilas": [], "reconstrucoes": []},
-                "quimioterapia": obj.tratamento.quimioterapia or {"neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "paliativa": []},
-                "radioterapia": obj.tratamento.radioterapia or {"neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "paliativa": []},
-                "endocrinoterapia": obj.tratamento.endocrinoterapia or {"neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "paliativa": []},
-                "imunoterapia": obj.tratamento.imunoterapia or {"neoadjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "adjuvante": {"data_inicio": "", "data_termino": "", "esquema": "", "intercorrencias": ""}, "paliativa": []},
-                "imunohistoquimicas": obj.tratamento.imunohistoquimicas or [],
-                "core_biopsy": obj.tratamento.core_biopsy or {"realizada": False, "data": "", "especime": "", "tecnica": "", "tipo_lesao": "", "anatomopatologico": "", "tipo_histologico": ""},
-                "mamotomia": obj.tratamento.mamotomia or {"realizada": False, "data": "", "especime": "", "tecnica": "", "tipo_lesao": "", "anatomopatologico": "", "tipo_histologico": ""},
-                "paaf": obj.tratamento.paaf or {"realizada": False, "data": "", "especime": "", "tecnica": "", "achados": ""}
-            } if obj.tratamento else None,
-            desfecho={k: v for k, v in obj.desfecho.__dict__.items() if not k.startswith('_')} if obj.desfecho else None,
-            tempos_diagnostico={k: v for k, v in obj.tempos_diagnostico.__dict__.items() if not k.startswith('_')} if obj.tempos_diagnostico else None
-        )
 
-# Historico
+# =======================================================================
+# SCHEMAS PARA HISTÓRICO
+# =======================================================================
+
 class PacienteHistorico(BaseModel):
     id: int
-    paciente_id: int
+    id_paciente: int
     data_modificacao: datetime
     dados_anteriores: dict
     

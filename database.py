@@ -25,8 +25,22 @@ def get_database_url():
         except ClientError as e:
             raise Exception(f"Erro ao obter credenciais do banco: {str(e)}")
     
-    # Desenvolvimento local: usar .env
-    return os.getenv("DATABASE_URL", "sqlite:///./projetovida_dev.db")
+    # Desenvolvimento local: usar .env ou construir URL PostgreSQL
+    database_url = os.getenv("DATABASE_URL")
+    if database_url:
+        return database_url
+    
+    # Se não há DATABASE_URL, tentar construir a partir das variáveis individuais
+    host = os.getenv("DB_HOST")
+    if host:
+        port = os.getenv("DB_PORT", "5432")
+        database = os.getenv("DB_NAME", "projetovida")
+        username = os.getenv("DB_USER", "postgres")
+        password = os.getenv("DB_PASSWORD", "password")
+        return f"postgresql://{username}:{password}@{host}:{port}/{database}"
+    
+    # Fallback para SQLite se não houver configuração PostgreSQL
+    return "sqlite:///./projetovida_dev.db"
 
 # 🔗 Pegar a URL do banco
 DATABASE_URL = get_database_url()
