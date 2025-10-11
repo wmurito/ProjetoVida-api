@@ -17,7 +17,12 @@ import exportar
 import os
 from secure_logger import get_secure_logger
 from auth import verify_token, get_current_user
-from dashboard import ( get_estadiamento, get_sobrevida_global, get_taxa_recidiva, get_media_delta_t)
+from dashboard import (
+    get_estadiamento, get_sobrevida_global, get_taxa_recidiva, get_media_delta_t,
+    get_distribuicao_genero, get_distribuicao_faixa_etaria, get_distribuicao_tipo_cirurgia,
+    get_distribuicao_marcadores, get_distribuicao_historia_familiar, get_distribuicao_habitos_vida,
+    get_resumo_geral
+)
 from s3_service import s3_service
 # Configurar logging seguro
 logger = get_secure_logger(__name__)
@@ -563,6 +568,62 @@ def dashboard_delta_t(
     current_user: dict = Depends(get_current_user)
 ):
     return get_media_delta_t(db)
+
+
+@app.get("/dashboard/genero")
+def dashboard_genero(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_genero(db)
+
+
+@app.get("/dashboard/faixa_etaria")
+def dashboard_faixa_etaria(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_faixa_etaria(db)
+
+
+@app.get("/dashboard/tipo_cirurgia")
+def dashboard_tipo_cirurgia(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_tipo_cirurgia(db)
+
+
+@app.get("/dashboard/marcadores")
+def dashboard_marcadores(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_marcadores(db)
+
+
+@app.get("/dashboard/historia_familiar")
+def dashboard_historia_familiar(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_historia_familiar(db)
+
+
+@app.get("/dashboard/habitos_vida")
+def dashboard_habitos_vida(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_distribuicao_habitos_vida(db)
+
+
+@app.get("/dashboard/resumo")
+def dashboard_resumo(
+    db: Session = Depends(get_db), 
+    current_user: dict = Depends(get_current_user)
+):
+    return get_resumo_geral(db)
 
 # Endpoints seguros para upload via QR Code
 @app.post("/upload-mobile/{session_id}")
