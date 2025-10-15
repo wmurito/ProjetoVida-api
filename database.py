@@ -37,7 +37,8 @@ def get_database_url():
         database = os.getenv("DB_NAME", "projetovida")
         username = os.getenv("DB_USER", "postgres")
         password = os.getenv("DB_PASSWORD", "password")
-        return f"postgresql://{username}:{password}@{host}:{port}/{database}"
+        schema = os.getenv("DB_SCHEMA", "clinical")
+        return f"postgresql://{username}:{password}@{host}:{port}/{database}?options=-csearch_path%3D{schema}"
     
     # Fallback para SQLite se não houver configuração PostgreSQL
     return "sqlite:///./projetovida_dev.db"
@@ -62,7 +63,8 @@ else:
         max_overflow=10,
         connect_args={
             "sslmode": "prefer",
-            "connect_timeout": 10
+            "connect_timeout": 10,
+            "options": "-c search_path=clinical"
         }
     )
 

@@ -4,11 +4,38 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: python3.9
+  runtime: python3.11
   region: us-east-1
   stage: ${opt:stage, 'prod'}
   memorySize: 512
   timeout: 29
+  
+  httpApi:
+    cors:
+      allowedOrigins:
+        - https://master.d1yi28nqqe44f2.amplifyapp.com
+        - http://localhost:5173
+        - http://192.168.2.101:5173
+      allowedHeaders:
+        - Content-Type
+        - X-Amz-Date
+        - Authorization
+        - X-Api-Key
+        - X-Amz-Security-Token
+        - X-Requested-With
+        - Accept
+        - Origin
+        - X-CSRF-Token
+      allowedMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+        - HEAD
+        - PATCH
+      allowCredentials: true
+      maxAge: 3600
   
   environment:
     S3_BUCKET: projeto-vida-prd
@@ -62,8 +89,8 @@ provider:
 
 custom:
   pythonRequirements:
-    dockerizePip: true
-    dockerImage: public.ecr.aws/sam/build-python3.9:latest
+    dockerizePip: non-linux
+    dockerImage: public.ecr.aws/sam/build-python3.11:latest
     slim: true
     strip: false
     layer: true

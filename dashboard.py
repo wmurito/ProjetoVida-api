@@ -327,10 +327,86 @@ def get_distribuicao_habitos_vida(db: Session):
         }
     except Exception as e:
         logger.error(f"Erro ao buscar distribuição por hábitos de vida: {str(e)}")
-        return {"tabagismo": [], "etilismo": [], "atividade_fisica": []}
+        return {"tabagismo": [], "etilismo": [], "atividade_fisica": []        }
 
 
-# ✅ 11. Resumo Geral do Dashboard
+# ✅ 11. Estatísticas Temporais de Pacientes
+def get_estatisticas_temporais(db: Session):
+    """
+    Retorna estatísticas de pacientes por mês/ano para gráficos temporais.
+    """
+    try:
+        # Buscar pacientes por mês de diagnóstico
+        pacientes_por_mes = db.query(
+            extract('year', models.Paciente.hd_data_diagnostico).label('ano'),
+            extract('month', models.Paciente.hd_data_diagnostico).label('mes'),
+            func.count(models.Paciente.id_paciente).label('total')
+        ).filter(
+            models.Paciente.hd_data_diagnostico.isnot(None)
+        ).group_by(
+            extract('year', models.Paciente.hd_data_diagnostico),
+            extract('month', models.Paciente.hd_data_diagnostico)
+        ).order_by(
+            extract('year', models.Paciente.hd_data_diagnostico),
+            extract('month', models.Paciente.hd_data_diagnostico)
+        ).all()
+
+        # Buscar consultas por mês (usando data de início do tratamento como proxy)
+        consultas_por_mes = db.query(
+            extract('year', models.Tratamento.data_inicio).label('ano'),
+            extract('month', models.Tratamento.data_inicio).label('mes'),
+            func.count(models.Tratamento.id_tratamento).label('total')
+        ).filter(
+            models.Tratamento.data_inicio.isnot(None)
+        ).group_by(
+            extract('year', models.Tratamento.data_inicio),
+            extract('month', models.Tratamento.data_inicio)
+        ).order_by(
+            extract('year', models.Tratamento.data_inicio),
+            extract('month', models.Tratamento.data_inicio)
+        ).all()
+
+        # Processar dados para o formato esperado pelo frontend
+        meses = []
+        novos_pacientes = []
+        consultas = []
+
+        # Criar um dicionário para facilitar a busca
+        pacientes_dict = {(int(p.ano), int(p.mes)): p.total for p in pacientes_por_mes}
+        consultas_dict = {(int(c.ano), int(c.mes)): c.total for c in consultas_por_mes}
+
+        # Obter todos os meses únicos
+        todos_meses = set()
+        todos_meses.update(pacientes_dict.keys())
+        todos_meses.update(consultas_dict.keys())
+
+        # Ordenar meses
+        meses_ordenados = sorted(todos_meses)
+
+        # Nomes dos meses
+        nomes_meses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 
+                      'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+
+        for ano, mes in meses_ordenados:
+            meses.append(f"{nomes_meses[mes-1]}/{ano}")
+            novos_pacientes.append(pacientes_dict.get((ano, mes), 0))
+            consultas.append(consultas_dict.get((ano, mes), 0))
+
+        return {
+            "months": meses,
+            "newPatients": novos_pacientes,
+            "consultations": consultas
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar estatísticas temporais: {str(e)}")
+        return {
+            "months": [],
+            "newPatients": [],
+            "consultations": []
+        }
+
+
+# ✅ 12. Resumo Geral do Dashboard
 def get_resumo_geral(db: Session):
     """
     Retorna um resumo geral com estatísticas principais.
