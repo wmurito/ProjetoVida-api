@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, validator
 from typing import Optional, List
 from datetime import date, datetime
 
@@ -292,6 +292,12 @@ class DesfechoBase(BaseModel):
     morte: Optional[bool] = False  # CORRIGIDO: Campo faltante no ORM
     data_morte: Optional[date] = None
     causa_morte: Optional[str] = None
+    
+    @validator('data_morte', pre=True)
+    def validate_data_morte(cls, v):
+        if v is None or v == '' or v == 'Invalid Date':
+            return None
+        return v
     
     # RECIDIVA / METÁSTASE
     recidiva_local: Optional[bool] = False

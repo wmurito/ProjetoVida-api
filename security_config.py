@@ -7,25 +7,26 @@ from typing import List
 class SecurityConfig:
     """Configurações centralizadas de segurança"""
     
-    # Rate Limiting
-    RATE_LIMIT_AUTH = "5/minute"
-    RATE_LIMIT_UPLOAD = "3/minute"
-    RATE_LIMIT_SESSION = "5/minute"
-    RATE_LIMIT_STATUS = "30/minute"
+    # Rate Limiting - Mais restritivo para segurança
+    RATE_LIMIT_AUTH = "3/minute"  # Reduzido de 5 para 3
+    RATE_LIMIT_UPLOAD = "2/minute"  # Reduzido de 3 para 2
+    RATE_LIMIT_SESSION = "3/minute"  # Reduzido de 5 para 3
+    RATE_LIMIT_STATUS = "20/minute"  # Reduzido de 30 para 20
     
     # Session Management
     SESSION_TIMEOUT_MINUTES = 2
     MAX_UPLOADS_PER_SESSION = 3
     
-    # File Upload
+    # File Upload - Mais restritivo
     MAX_FILE_SIZE_MB = 2
     ALLOWED_FILE_TYPES = [
         'application/pdf',
         'image/jpeg',
-        'image/png',
-        'image/jpg'
+        'image/png'
+        # Removido 'image/jpg' - usar apenas 'image/jpeg'
     ]
-    ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpg', '.jpeg', '.png']
+    ALLOWED_FILE_EXTENSIONS = ['.pdf', '.jpeg', '.png']
+    # Removido '.jpg' - usar apenas '.jpeg'
     
     # CORS
     CORS_MAX_AGE = 1800  # 30 minutos
@@ -49,10 +50,12 @@ class SecurityConfig:
         "Permissions-Policy": "geolocation=(), microphone=(), camera=()"
     }
     
-    # Suspicious User Agents
+    # Suspicious User Agents - Lista expandida
     SUSPICIOUS_USER_AGENTS = [
         "bot", "crawler", "scanner", "sqlmap", "nikto", "nmap",
-        "masscan", "zap", "burp", "w3af", "acunetix"
+        "masscan", "zap", "burp", "w3af", "acunetix", "curl",
+        "wget", "python-requests", "postman", "insomnia", "httpie",
+        "scrapy", "selenium", "phantomjs", "headless", "automated"
     ]
     
     @classmethod
@@ -81,7 +84,7 @@ class SecurityConfig:
     def get_cors_origins(cls) -> List[str]:
         """Retorna origens CORS apropriadas para o ambiente"""
         if cls.is_production():
-            # Em produção, usar domínio específico da API Gateway
-            return ["https://84i8-3.execute-api.us-east-1.amazonaws.com"]
+            # Em produção, usar domínio do Amplify (frontend)
+            return ["https://master.d1yi28nqqe44f2.amplifyapp.com"]
         else:
             return cls.get_allowed_origins()

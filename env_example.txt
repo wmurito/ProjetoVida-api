@@ -4,9 +4,10 @@ DB_PORT=5432
 DB_NAME=projetovida
 DB_USER=postgres
 DB_PASSWORD=sua_senha_aqui
+DB_SCHEMA=clinical
 
 # URL completa do banco (será construída automaticamente)
-DATABASE_URL=postgresql://postgres:sua_senha_aqui@localhost:5432/projetovida
+DATABASE_URL=postgresql://postgres:sua_senha_aqui@localhost:5432/projetovida?options=-csearch_path%3Dclinical
 
 # Configurações de CORS
 ALLOWED_ORIGINS=http://localhost:5173,http://192.168.2.101:5173,https://master.d1yi28nqqe44f2.amplifyapp.com
