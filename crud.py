@@ -131,8 +131,21 @@ def get_paciente(db: Session, paciente_id: int):
 
 
 def get_pacientes(db: Session, skip: int = 0, limit: int = 100):
-    """Lista pacientes com paginação"""
-    return db.query(models.Paciente).offset(skip).limit(limit).all()
+    """
+    Lista pacientes da tabela PACIENTE com paginação.
+    Consulta a tabela principal conforme a modelagem de dados.
+    """
+    try:
+        # Consulta direta na tabela PACIENTE
+        pacientes = db.query(models.Paciente).offset(skip).limit(limit).all()
+        
+        # Log para debug (remover em produção)
+        print(f"CRUD: Consultando tabela PACIENTE - {len(pacientes)} registros encontrados")
+        
+        return pacientes
+    except Exception as e:
+        print(f"Erro na consulta de pacientes: {str(e)}")
+        raise e
 
 
 def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCreate):
