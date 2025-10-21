@@ -62,7 +62,8 @@ else:
         max_overflow=10,
         connect_args={
             "sslmode": "prefer",
-            "connect_timeout": 10
+            "connect_timeout": 10,
+            "options": "-c search_path=public"
         }
     )
 

@@ -29,7 +29,7 @@ class Familiar(FamiliarBase):
     id_paciente: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA TRATAMENTO - CIRURGIAS (UNIFICADAS)
@@ -48,7 +48,7 @@ class Cirurgia(CirurgiaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA TRATAMENTO - TERAPIAS PALIATIVAS
@@ -69,7 +69,7 @@ class PalliativoQuimioterapia(PalliativoQuimioterapiaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class PalliativoRadioterapiaBase(BaseModel):
     data_inicio: Optional[date] = None
@@ -85,7 +85,7 @@ class PalliativoRadioterapia(PalliativoRadioterapiaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class PalliativoEndocrinoterapiaBase(BaseModel):
     data_inicio: Optional[date] = None
@@ -101,7 +101,7 @@ class PalliativoEndocrinoterapia(PalliativoEndocrinoterapiaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class PalliativoImunoterapiaBase(BaseModel):
     data_inicio: Optional[date] = None
@@ -117,7 +117,7 @@ class PalliativoImunoterapia(PalliativoImunoterapiaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA IMUNOHISTOQUÍMICAS
@@ -143,7 +143,7 @@ class Imunohistoquimica(ImunohistoquimicaBase):
     id_tratamento: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA TRATAMENTO
@@ -248,7 +248,7 @@ class Tratamento(TratamentoBase):
     imunohistoquimicas: Optional[List[Imunohistoquimica]] = []
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA DESFECHO - METÁSTASES E EVENTOS
@@ -265,7 +265,7 @@ class Metastase(MetastaseBase):
     id_desfecho: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 class EventoBase(BaseModel):
     data: Optional[date] = None
@@ -280,7 +280,7 @@ class Evento(EventoBase):
     id_desfecho: int
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA DESFECHO
@@ -322,7 +322,7 @@ class Desfecho(DesfechoBase):
     eventos: Optional[List[Evento]] = []
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA PACIENTE
@@ -441,7 +441,7 @@ class Paciente(PacienteBase):
     desfecho: Optional[Desfecho] = None
     
     class Config:
-        from_attributes = True
+        orm_mode = True
 
 # =======================================================================
 # SCHEMAS PARA HISTÓRICO
@@ -454,4 +454,4 @@ class PacienteHistorico(BaseModel):
     dados_anteriores: dict
     
     class Config:
-        from_attributes = True
+        orm_mode = True
