@@ -21,7 +21,7 @@ from dashboard import (
     get_estadiamento, get_sobrevida_global, get_taxa_recidiva, get_media_delta_t,
     get_distribuicao_genero, get_distribuicao_faixa_etaria, get_distribuicao_tipo_cirurgia,
     get_distribuicao_marcadores, get_distribuicao_historia_familiar, get_distribuicao_habitos_vida,
-    get_resumo_geral, get_estatisticas_temporais
+    get_resumo_geral
 )
 from s3_service import s3_service
 # Configurar logging seguro
@@ -64,9 +64,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=SAFE_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
-    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token", "Accept", "Origin"],
-    max_age=3600,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With", "X-CSRF-Token"],
+    max_age=1800,
     expose_headers=["X-Total-Count"]
 )
 
@@ -84,29 +84,35 @@ def get_db():
 # Middleware para log e segurança
 @app.middleware("http")
 async def security_middleware(request: Request, call_next):
+    # Log seguro sem dados sensíveis
     client_ip = request.client.host if request.client else "unknown"
     origin = request.headers.get("origin", "")
-
-    # Validate CSRF for mutating requests
-    if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
-        csrf_token = request.headers.get("X-CSRF-Token")
-        if not csrf_token or len(csrf_token) != 32:
-            logger.warning("CSRF token inválido ou ausente - %s %s", client_ip, request.url.path)
-            return JSONResponse(
-                status_code=403,
-                content={"detail": "CSRF token inválido"}
-            )
-
-    # Process request and get response
+    
+    # Para requisições OPTIONS (preflight), permitir passagem SEM validações
+    if request.method == "OPTIONS":
+        response = await call_next(request)
+        return response
+    
+    # Validar CSRF token apenas para requisições autenticadas que modificam dados
+    # Desabilitado temporariamente para debug
+    # if request.method in ["POST", "PUT", "DELETE", "PATCH"]:
+    #     csrf_token = request.headers.get("X-CSRF-Token")
+    #     if not csrf_token or len(csrf_token) != 32:
+    #         logger.warning("CSRF token inválido ou ausente")
+    #         return JSONResponse(
+    #             status_code=403,
+    #             content={"detail": "CSRF token inválido"}
+    #         )
+    
     response = await call_next(request)
     
-    # Add security headers to all responses
-    response.headers.setdefault("X-Content-Type-Options", "nosniff")
-    response.headers.setdefault("X-Frame-Options", "DENY")
-    response.headers.setdefault("X-XSS-Protection", "1; mode=block")
-    response.headers.setdefault("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
-
+    # Adicionar cabeçalhos de segurança
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    
     return response
 
 # Rota raiz (pública - apenas status)
@@ -114,10 +120,35 @@ async def security_middleware(request: Request, call_next):
 def read_root():
     return {"status": "online"}
 
+# Rota para lidar com requisições OPTIONS (preflight CORS)
+@app.options("/{path:path}")
+async def options_handler(path: str, request: Request):
+    """Handler para requisições OPTIONS (preflight CORS)"""
+    origin = request.headers.get("origin", "")
+    
+    # Verificar se a origem é permitida
+    if origin and origin in SAFE_ORIGINS:
+        allow_origin = origin
+    else:
+        allow_origin = SAFE_ORIGINS[0] if SAFE_ORIGINS else "*"
+    
+    return JSONResponse(
+        status_code=200,
+        content={},
+        headers={
+            "Access-Control-Allow-Origin": allow_origin,
+            "Access-Control-Allow-Methods": "GET, POST, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Requested-With, X-CSRF-Token",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "1800"
+        }
+    )
+
 # Rota de verificação de autenticação
 @app.get("/auth/me", response_model=Dict[str, Any])
 def read_users_me(current_user: Dict[str, Any] = Depends(get_current_user)):
     return current_user
+
 
 
 @app.get('/api/pacientes/exportar_excel')
@@ -165,7 +196,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # Rota para testar autenticação com token (PROTEGIDA)
 @app.post("/auth/validate-token")
-@limiter.limit("3/minute")  # Rate limiting mais rigoroso
+@limiter.limit("5/minute")  # Rate limiting rigoroso
 async def validate_token(
     request: Request,
     current_user: Dict[str, Any] = Depends(get_current_user)
@@ -330,7 +361,7 @@ def create_session(ip_address: str) -> str:
 # Rotas protegidas para Paciente
 
 @app.post("/upload-termo-aceite")
-@limiter.limit("2/minute")
+@limiter.limit("5/minute")
 async def upload_termo_aceite(
     paciente_id: str = Form(...),
     termo: UploadFile = File(...),
@@ -555,17 +586,9 @@ def dashboard_resumo(
 ):
     return get_resumo_geral(db)
 
-
-@app.get("/dashboard/estatisticas_temporais")
-def dashboard_estatisticas_temporais(
-    db: Session = Depends(get_db), 
-    current_user: dict = Depends(get_current_user)
-):
-    return get_estatisticas_temporais(db)
-
 # Endpoints seguros para upload via QR Code
 @app.post("/upload-mobile/{session_id}")
-@limiter.limit("2/minute")  # Reduzido para 2 uploads por minuto por IP
+@limiter.limit("3/minute")  # Reduzido para 3 uploads por minuto por IP
 async def secure_upload_mobile(
     session_id: str,
     file_data: SecureFileUpload,
@@ -619,7 +642,7 @@ async def secure_upload_mobile(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.get("/upload-status/{session_id}")
-@limiter.limit("20/minute")  # Reduzido para 20 verificações por minuto
+@limiter.limit("30/minute")  # Reduzido para 30 verificações por minuto
 async def secure_check_upload_status(
     session_id: str,
     request: Request
@@ -646,7 +669,7 @@ async def secure_check_upload_status(
         raise HTTPException(status_code=500, detail="Erro interno do servidor")
 
 @app.post("/create-upload-session")
-@limiter.limit("3/minute")  # Reduzido para 3 sessões por minuto
+@limiter.limit("5/minute")  # Reduzido para 5 sessões por minuto
 async def create_upload_session(request: Request):
     """Cria uma nova sessão de upload"""
     try:

@@ -4,11 +4,14 @@ frameworkVersion: '3'
 
 provider:
   name: aws
-  runtime: python3.9
   region: us-east-1
   stage: ${opt:stage, 'prod'}
   memorySize: 512
   timeout: 29
+  ecr:
+    images:
+      appimage:
+        path: ./
   
   environment:
     S3_BUCKET: projeto-vida-prd
@@ -17,29 +20,9 @@ provider:
     COGNITO_SECRET_NAME: projeto-vida/cognito
     STAGE: ${self:provider.stage}
   
-  httpApi:
-    cors:
-      allowedOrigins:
-        - https://master.d1yi28nqqe44f2.amplifyapp.com
-        - http://localhost:5173
-      allowedHeaders:
-        - Content-Type
-        - Authorization
-        - X-Requested-With
-        - X-CSRF-Token
-      allowedMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowCredentials: true
-      maxAge: 1800
-  
   iam:
     role:
       statements:
-        # PERMISSÕES DE S3
         - Effect: Allow
           Action:
             - s3:GetObject
@@ -48,13 +31,11 @@ provider:
             - s3:HeadObject
           Resource: "arn:aws:s3:::projeto-vida-prd/*"
           
-        # PERMISSÕES DE SECRETS MANAGER
         - Effect: Allow
           Action:
             - secretsmanager:GetSecretValue
           Resource: "arn:aws:secretsmanager:${self:provider.region}:*:secret:projeto-vida/*"
           
-        # PERMISSÕES PARA A LAMBDA CONECTAR À VPC (EC2)
         - Effect: Allow
           Action:
             - ec2:CreateNetworkInterface
@@ -64,7 +45,6 @@ provider:
             - ec2:UnassignPrivateIpAddresses
           Resource: "*"
 
-        # PERMISSÕES DE CLOUDWATCH LOGS
         - Effect: Allow
           Action:
             - logs:CreateLogGroup
@@ -79,56 +59,49 @@ provider:
       - subnet-0fcb4e5a4433397c3
       - subnet-045bdd15a0355fdbc
 
-custom:
-  pythonRequirements:
-    dockerizePip: true
-    dockerImage: public.ecr.aws/sam/build-python3.9:latest
-    slim: true
-    strip: false
-    layer: true
-    fileName: requirements-lambda.txt
-
 functions:
   api:
-    handler: main.handler
+    image:
+      name: appimage
     name: ProjetoVidaAPI
-    layers:
-      - Ref: PythonRequirementsLambdaLayer
     events:
       - httpApi:
           path: /
           method: ANY
+          cors:
+            allowedOrigins:
+              - https://master.d1yi28nqqe44f2.amplifyapp.com
+              - http://localhost:5173
+            allowedHeaders:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+              - X-CSRF-Token
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowCredentials: true
+            maxAge: 1800
       - httpApi:
           path: /{proxy+}
           method: ANY
-
-plugins:
-  - serverless-python-requirements
-
-package:
-  individually: false
-  patterns:
-    - '!node_modules/**'
-    - '!venv/**'
-    - '!.venv/**'
-    - '!__pycache__/**'
-    - '!*.pyc'
-    - '!.git/**'
-    - '!*.md'
-    - '!tests/**'
-    - '!*.zip'
-    - '!*.ps1'
-    - '!*.sh'
-    - '!requirements.txt'
-    - '!requirements-dev.txt'
-    - '!*.log'
-    - '!.pytest_cache/**'
-    - '!coverage/**'
-    - '!.coverage'
-    - '!htmlcov/**'
-    - '!.tox/**'
-    - '!.mypy_cache/**'
-    - '!.DS_Store'
-    - '!Thumbs.db'
-    - '!cleanup.ps1'
-    - '!migrate_to_postgresql.py'
+          cors:
+            allowedOrigins:
+              - https://master.d1yi28nqqe44f2.amplifyapp.com
+              - http://localhost:5173
+            allowedHeaders:
+              - Content-Type
+              - Authorization
+              - X-Requested-With
+              - X-CSRF-Token
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowCredentials: true
+            maxAge: 1800
