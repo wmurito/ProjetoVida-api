@@ -1,60 +1,41 @@
-service: projetovida-api
-
-frameworkVersion: '3'
+service: projeto-vida-api
+frameworkVersion: '4'
 
 provider:
   name: aws
-  runtime: python3.9
+  runtime: python3.11
+  architecture: x86_64 
   region: us-east-1
   stage: ${opt:stage, 'prod'}
   memorySize: 512
   timeout: 29
-  
+
   environment:
     S3_BUCKET: projeto-vida-prd
     S3_KEY_PREFIX: dashboard_files
     DB_SECRET_NAME: projeto-vida/database
     COGNITO_SECRET_NAME: projeto-vida/cognito
     STAGE: ${self:provider.stage}
-  
-  httpApi:
-    cors:
-      allowedOrigins:
-        - https://master.d1yi28nqqe44f2.amplifyapp.com
-        - http://localhost:5173
-      allowedHeaders:
-        - Content-Type
-        - Authorization
-        - X-Requested-With
-        - X-CSRF-Token
-      allowedMethods:
-        - GET
-        - POST
-        - PUT
-        - DELETE
-        - OPTIONS
-      allowCredentials: true
-      maxAge: 1800
-  
+
   iam:
     role:
       statements:
-        # PERMISSÕES DE S3
+        # Permissões de S3
         - Effect: Allow
           Action:
             - s3:GetObject
             - s3:PutObject
             - s3:DeleteObject
             - s3:HeadObject
-          Resource: "arn:aws:s3:::projeto-vida-prd/*"
-          
-        # PERMISSÕES DE SECRETS MANAGER
+          Resource: arn:aws:s3:::projeto-vida-prd/*
+
+        # Permissões de Secrets Manager
         - Effect: Allow
           Action:
             - secretsmanager:GetSecretValue
-          Resource: "arn:aws:secretsmanager:${self:provider.region}:*:secret:projeto-vida/*"
-          
-        # PERMISSÕES PARA A LAMBDA CONECTAR À VPC (EC2)
+          Resource: arn:aws:secretsmanager:${self:provider.region}:*:secret:projeto-vida/*
+
+        # Permissões para a Lambda conectar à VPC
         - Effect: Allow
           Action:
             - ec2:CreateNetworkInterface
@@ -64,14 +45,14 @@ provider:
             - ec2:UnassignPrivateIpAddresses
           Resource: "*"
 
-        # PERMISSÕES DE CLOUDWATCH LOGS
+        # Permissões de CloudWatch Logs
         - Effect: Allow
           Action:
             - logs:CreateLogGroup
             - logs:CreateLogStream
             - logs:PutLogEvents
           Resource: "*"
-  
+
   vpc:
     securityGroupIds:
       - sg-010ebae9343e8f422
@@ -81,17 +62,24 @@ provider:
 
 custom:
   pythonRequirements:
+    fileName: requirements-lambda.txt
     dockerizePip: true
-    dockerImage: public.ecr.aws/sam/build-python3.9:latest
+    dockerImage: public.ecr.aws/sam/build-python3.11:latest
     slim: true
     strip: false
     layer: true
-    fileName: requirements-lambda.txt
+    pipCmdExtraArgs:
+      - --no-cache-dir
+      - --compile
+      - --force-reinstall
+    noDeps: false
+    noDeploy: false
 
 functions:
   api:
     handler: main.handler
     name: ProjetoVidaAPI
+    description: API principal do Projeto Vida (FastAPI)
     layers:
       - Ref: PythonRequirementsLambdaLayer
     events:

@@ -1,16 +1,15 @@
 {
   "name": "projetovida-api",
   "version": "1.0.0",
-  "description": "ProjetoVida API - Sistema de Gestão de Dados Oncológicos",
+  "main": "index.js",
   "scripts": {
-    "deploy": "serverless deploy --verbose",
-    "deploy:prod": "serverless deploy --stage prod --verbose",
-    "remove": "serverless remove",
-    "logs": "serverless logs -f api -t",
-    "info": "serverless info"
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
   "devDependencies": {
-    "serverless": "^3.38.0",
     "serverless-python-requirements": "^6.1.2"
   }
 }
