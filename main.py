@@ -276,9 +276,9 @@ class SecureFileUpload(BaseModel):
             header, data = v.split(',', 1)
             decoded = base64.b64decode(data)
             
-            max_size = 2 * 1024 * 1024
+            max_size = 5 * 1024 * 1024
             if len(decoded) > max_size:
-                raise ValueError('Arquivo muito grande (máximo 2MB)')
+                raise ValueError('Arquivo muito grande (máximo 5MB)')
             
             base64.b64decode(data, validate=True)
             
@@ -333,57 +333,7 @@ def create_session(ip_address: str) -> str:
     return session_id
 
 
-# Rotas protegidas para Paciente (Mantido)
-@app.post("/upload-termo-aceite")
-@limiter.limit("5/minute")
-async def upload_termo_aceite(
-    paciente_id: str = Form(...),
-    termo: UploadFile = File(...),
-    request: Request = None,
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    # ... código da rota (sem alterações) ...
-    try:
-        if not paciente_id:
-            raise HTTPException(status_code=400, detail="ID do paciente inválido")
-        
-        content = await termo.read()
-        
-        if len(content) > 5 * 1024 * 1024:
-            raise HTTPException(status_code=400, detail="Arquivo muito grande. Máximo 5MB")
-        
-        if content.startswith(b'%PDF'):
-            file_type = 'application/pdf'
-        elif content.startswith(b'\xff\xd8\xff'):
-            file_type = 'image/jpeg'
-        elif content.startswith(b'\x89PNG\r\n\x1a\n'):
-            file_type = 'image/png'
-        else:
-            raise HTTPException(status_code=400, detail="Tipo de arquivo não permitido. Use PDF, JPG ou PNG")
-        
-        allowed_types = ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg']
-        if termo.content_type not in allowed_types:
-            raise HTTPException(status_code=400, detail="Content-Type não permitido")
-        
-        termo_key = f"termos/{paciente_id}/termo_aceite.pdf"
-        s3_service.s3_client.put_object(
-            Bucket=s3_service.bucket,
-            Key=termo_key,
-            Body=content,
-            ContentType=file_type,
-            ServerSideEncryption='AES256',
-            ACL='private'
-        )
-        
-        logger.info(f"Termo salvo no S3 para paciente: {paciente_id}")
-        return {"success": True, "message": "Termo de aceite enviado com sucesso", "paciente_id": paciente_id}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao fazer upload do termo: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro ao processar arquivo")
-
+# Rotas protegidas para Paciente
 @app.post("/pacientes/", response_model=schemas.Paciente)
 async def create_paciente(
     paciente: schemas.PacienteCreate = Body(...),
@@ -609,103 +559,3 @@ def dashboard_estatisticas_temporais(
     return get_media_delta_t(db)
 
 
-# Endpoints seguros para upload via QR Code (Mantido)
-@app.post("/upload-mobile/{session_id}")
-@limiter.limit("3/minute") 
-async def secure_upload_mobile(
-    session_id: str,
-    file_data: SecureFileUpload,
-    request: Request
-):
-    # ... código da rota (sem alterações) ...
-    try:
-        if not validate_session(session_id, request.client.host):
-            logger.warning(f"Tentativa de upload com sessão inválida: {session_id[:8]}...")
-            raise HTTPException(status_code=404, detail="Sessão inválida ou expirada")
-        
-        with session_lock:
-            if session_id in active_sessions:
-                session = active_sessions[session_id]
-                if session['uploads_count'] >= session['max_uploads']:
-                    logger.warning(f"Limite de uploads excedido para sessão: {session_id[:8]}...")
-                    raise HTTPException(status_code=429, detail="Limite de uploads excedido para esta sessão")
-                
-                session['uploads_count'] += 1
-        
-        logger.info(f"Upload recebido para sessão: {session_id[:8]}...")
-        
-        s3_service.save_upload(session_id, file_data.dict())
-        
-        header, data = file_data.fileData.split(',', 1)
-        file_content = base64.b64decode(data)
-        termo_key = f"termos/{file_data.paciente_id}/termo_aceite.pdf"
-        
-        s3_service.s3_client.put_object(
-            Bucket=s3_service.bucket,
-            Key=termo_key,
-            Body=file_content,
-            ContentType=file_data.fileType,
-            ServerSideEncryption='AES256',
-            ACL='private'
-        )
-        
-        logger.info(f"Termo salvo no S3 para paciente: {file_data.paciente_id}")
-        
-        return {"success": True, "message": "Arquivo recebido com sucesso", "paciente_id": file_data.paciente_id}
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro no upload: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
-
-@app.get("/upload-status/{session_id}")
-@limiter.limit("30/minute") 
-async def secure_check_upload_status(
-    session_id: str,
-    request: Request
-):
-    # ... código da rota (sem alterações) ...
-    try:
-        if not validate_session(session_id, request.client.host):
-            raise HTTPException(status_code=404, detail="Sessão inválida ou expirada")
-        
-        data = s3_service.get_upload(session_id)
-        
-        if data:
-            logger.info(f"Arquivo encontrado para sessão: {session_id[:8]}...")
-            return data
-        else:
-            raise HTTPException(status_code=404, detail="Arquivo não encontrado")
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Erro ao verificar status: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")
-
-@app.post("/create-upload-session")
-@limiter.limit("5/minute")
-async def create_upload_session(request: Request):
-    # ... código da rota (sem alterações) ...
-    try:
-        session_id = create_session(request.client.host)
-        
-        now = datetime.utcnow()
-        expired_sessions = [
-            sid for sid, session in active_sessions.items()
-            if now - session['created_at'] > timedelta(minutes=5)
-        ]
-        
-        for sid in expired_sessions:
-            del active_sessions[sid]
-        
-        return {
-            "session_id": session_id,
-            "upload_url": f"/upload-mobile/{session_id}",
-            "expires_in": 300
-        }
-        
-    except Exception as e:
-        logger.error(f"Erro ao criar sessão: {str(e)}")
-        raise HTTPException(status_code=500, detail="Erro interno do servidor")

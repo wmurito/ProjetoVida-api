@@ -338,8 +338,8 @@ class PacienteBase(BaseModel):
     escolaridade: Optional[str] = None
     renda_familiar: Optional[str] = None
     naturalidade: Optional[str] = None
+    endereco: Optional[str] = None
     cep: Optional[str] = None
-    logradouro: Optional[str] = None
     numero: Optional[str] = None
     complemento: Optional[str] = None
     bairro: Optional[str] = None

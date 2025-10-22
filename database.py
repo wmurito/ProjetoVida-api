@@ -7,7 +7,7 @@ import json
 import boto3
 from botocore.exceptions import ClientError
 
-# 🔥 Carregar variáveis do .env
+# Carregar variáveis do .env
 load_dotenv()
 
 def get_database_url():
@@ -21,6 +21,9 @@ def get_database_url():
             secret = json.loads(response['SecretString'])
             
             # Construir URL do PostgreSQL
+            # NOTA: O ajuste para o esquema 'clinical' será feito abaixo na função create_engine,
+            # mas você também pode adicionar o parâmetro de options aqui:
+            # return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret['port']}/{secret['dbname']}?options=-csearch_path=clinical"
             return f"postgresql://{secret['username']}:{secret['password']}@{secret['host']}:{secret['port']}/{secret['dbname']}"
         except ClientError as e:
             raise Exception(f"Erro ao obter credenciais do banco: {str(e)}")
@@ -42,10 +45,10 @@ def get_database_url():
     # Fallback para SQLite se não houver configuração PostgreSQL
     return "sqlite:///./projetovida_dev.db"
 
-# 🔗 Pegar a URL do banco
+#  Pegar a URL do banco
 DATABASE_URL = get_database_url()
 
-# 🔧 Criar engine com opções para AWS Lambda ou SQLite
+# Criar engine com opções para AWS Lambda ou SQLite
 if DATABASE_URL.startswith("sqlite"):
     # Configuração para SQLite (desenvolvimento)
     engine = create_engine(
@@ -54,6 +57,7 @@ if DATABASE_URL.startswith("sqlite"):
     )
 else:
     # Configuração para PostgreSQL (produção)
+    # A ÚNICA MUDANÇA É AQUI: search_path=clinical
     engine = create_engine(
         DATABASE_URL,
         pool_pre_ping=True,
@@ -63,12 +67,10 @@ else:
         connect_args={
             "sslmode": "prefer",
             "connect_timeout": 10,
-            "options": "-c search_path=public"
+            "options": "-c search_path=clinical"  # Ajuste do schema padrão
         }
     )
 
-# 🏗️ Sessão
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 📦 Base para os models
 Base = declarative_base()
