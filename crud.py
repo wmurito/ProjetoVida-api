@@ -6,10 +6,23 @@ import datetime
 def create_paciente(db: Session, paciente: schemas.PacienteCreate):
     """Cria paciente com todos os dados relacionados"""
     
-    # Criar paciente principal
-    db_paciente = models.Paciente(**paciente.dict(exclude={
+    # Extrair os dados do paciente
+    paciente_dict = paciente.dict(exclude={
         "familiares", "tratamento", "desfecho"
-    }))
+    })
+    
+    # Calcular a idade automaticamente baseada na data de nascimento e momento do cadastro
+    if paciente.data_nascimento and not paciente_dict.get('idade'):
+        hoje = datetime.date.today()
+        idade_calculada = hoje.year - paciente.data_nascimento.year - ((hoje.month, hoje.day) < (paciente.data_nascimento.month, paciente.data_nascimento.day))
+        paciente_dict['idade'] = idade_calculada
+        
+        # Opcionalmente, pode ser útil preencher a idade no diagnóstico para análise
+        if paciente_dict.get('hd_idade_diagnostico') is None:
+            paciente_dict['hd_idade_diagnostico'] = idade_calculada
+
+    # Criar paciente principal
+    db_paciente = models.Paciente(**paciente_dict)
     db.add(db_paciente)
     db.flush()
     
@@ -157,10 +170,22 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
     # Salvar histórico
     save_historico(db, db_paciente)
     
-    # Atualizar dados principais
-    for key, value in paciente.dict(exclude={
+    # Extrair novos dados
+    paciente_dict = paciente.dict(exclude={
         "familiares", "tratamento", "desfecho"
-    }).items():
+    })
+    
+    # Recalcular idade se a data de nascimento for atualizada e a idade vier nula
+    if paciente.data_nascimento and not paciente_dict.get('idade'):
+        hoje = datetime.date.today()
+        idade_calculada = hoje.year - paciente.data_nascimento.year - ((hoje.month, hoje.day) < (paciente.data_nascimento.month, paciente.data_nascimento.day))
+        paciente_dict['idade'] = idade_calculada
+        
+        if paciente_dict.get('hd_idade_diagnostico') is None:
+            paciente_dict['hd_idade_diagnostico'] = idade_calculada
+    
+    # Atualizar dados principais
+    for key, value in paciente_dict.items():
         setattr(db_paciente, key, value)
     
     # Atualizar relacionamentos
