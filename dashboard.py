@@ -116,7 +116,7 @@ def get_media_delta_t(db: Session):
         diag_cirurgia = db.query(
             literal('Diagnóstico → Cirurgia').label('processo'),
             func.avg(
-                extract('day', cast(data_cir, Date) - cast(data_diag, Date))
+                cast(data_cir, Date) - cast(data_diag, Date)
             ).label('media_dias')
         ).filter(
             data_cir.isnot(None),
@@ -127,7 +127,7 @@ def get_media_delta_t(db: Session):
         diag_tratamento = db.query(
             literal('Diagnóstico → Início Tratamento').label('processo'),
             func.avg(
-                extract('day', cast(data_init_trat, Date) - cast(data_diag, Date))
+                cast(data_init_trat, Date) - cast(data_diag, Date)
             ).label('media_dias')
         ).filter(
             data_init_trat.isnot(None),
@@ -138,7 +138,7 @@ def get_media_delta_t(db: Session):
         consulta_diag = db.query(
             literal('Primeira Consulta → Diagnóstico').label('processo'),
             func.avg(
-                extract('day', cast(data_diag, Date) - cast(data_prim_cons, Date))
+                cast(data_diag, Date) - cast(data_prim_cons, Date)
             ).label('media_dias')
         ).filter(
             data_diag.isnot(None),

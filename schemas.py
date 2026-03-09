@@ -239,14 +239,6 @@ class Tratamento(TratamentoBase):
     id_tratamento: int
     id_paciente: int
     
-    # Relacionamentos 1:N (Simplificados para a melhor prática com 1 Tabela de Cirurgia)
-    cirurgias: Optional[List[Cirurgia]] = []
-    quimio_paliativa: Optional[List[PalliativoQuimioterapia]] = []
-    radio_paliativa: Optional[List[PalliativoRadioterapia]] = []
-    endo_paliativa: Optional[List[PalliativoEndocrinoterapia]] = []
-    imuno_paliativa: Optional[List[PalliativoImunoterapia]] = []
-    imunohistoquimicas: Optional[List[Imunohistoquimica]] = []
-    
     class Config:
         orm_mode = True
 
@@ -317,10 +309,6 @@ class Desfecho(DesfechoBase):
     id_desfecho: int
     id_paciente: int
     
-    # Relacionamentos 1:N
-    metastases: Optional[List[Metastase]] = []
-    eventos: Optional[List[Evento]] = []
-    
     class Config:
         orm_mode = True
 
@@ -330,8 +318,8 @@ class Desfecho(DesfechoBase):
 
 class PacienteBase(BaseModel):
     # DADOS PESSOAIS E ENDEREÇO
-    nome_completo: str
-    data_nascimento: date
+    nome_completo: Optional[str] = None
+    data_nascimento: Optional[date] = None
     genero: Optional[str] = None
     estado_civil: Optional[str] = None
     cor_etnia: Optional[str] = None
@@ -405,12 +393,12 @@ class PacienteBase(BaseModel):
     p_tempo_uso_aco: Optional[str] = None
 
     # HISTÓRIA DA DOENÇA (HD)
-    hd_sinal_sintoma_principal: str
+    hd_sinal_sintoma_principal: Optional[str] = None
     hd_outro_sinal_sintoma: Optional[str] = None
-    hd_data_sintomas: date
-    hd_idade_diagnostico: int
+    hd_data_sintomas: Optional[date] = None
+    hd_idade_diagnostico: Optional[int] = None
     hd_ecog: Optional[str] = None
-    hd_lado_acometido: str
+    hd_lado_acometido: Optional[str] = None
     hd_tamanho_tumoral_clinico: Optional[float] = None
     hd_linfonodos_palpaveis: Optional[str] = None
     hd_estadiamento_clinico: Optional[str] = None
@@ -435,10 +423,6 @@ class Paciente(PacienteBase):
     
     # Relacionamentos 1:N
     familiares: Optional[List[Familiar]] = []
-    
-    # Relacionamentos 1:1
-    tratamento: Optional[Tratamento] = None
-    desfecho: Optional[Desfecho] = None
     
     class Config:
         orm_mode = True

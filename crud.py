@@ -124,7 +124,7 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
 
 
 def get_paciente(db: Session, paciente_id: int):
-    """Busca paciente por ID com todos os relacionamentos"""
+    """Busca paciente por ID"""
     return db.query(models.Paciente).filter(
         models.Paciente.id_paciente == paciente_id
     ).first()

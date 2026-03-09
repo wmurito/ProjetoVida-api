@@ -106,10 +106,10 @@ class Paciente(Base):
     mp_score_gail = Column(String(50))
     
     # Relacionamentos
-    familiares = relationship("PacienteFamiliar", back_populates="paciente", cascade="all, delete-orphan")
-    tratamento = relationship("Tratamento", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
-    desfecho = relationship("Desfecho", back_populates="paciente", cascade="all, delete-orphan", uselist=False)
-    historico = relationship("PacienteHistorico", back_populates="paciente", cascade="all, delete-orphan")
+    familiares = relationship("PacienteFamiliar", back_populates="paciente", cascade="all, delete-orphan", lazy="noload")
+    tratamento = relationship("Tratamento", back_populates="paciente", cascade="all, delete-orphan", uselist=False, lazy="noload")
+    desfecho = relationship("Desfecho", back_populates="paciente", cascade="all, delete-orphan", uselist=False, lazy="noload")
+    historico = relationship("PacienteHistorico", back_populates="paciente", cascade="all, delete-orphan", lazy="noload")
 
 
 # =======================================================================
@@ -226,13 +226,13 @@ class Tratamento(Base):
     
     paciente = relationship("Paciente", back_populates="tratamento")
     
-    # Relacionamentos 1:N (Simplificados para a melhor prática com 1 Tabela de Cirurgia)
-    cirurgias = relationship("TratamentoCirurgia", back_populates="tratamento", cascade="all, delete-orphan")
-    quimio_paliativa = relationship("PalliativoQuimioterapia", back_populates="tratamento", cascade="all, delete-orphan")
-    radio_paliativa = relationship("PalliativoRadioterapia", back_populates="tratamento", cascade="all, delete-orphan")
-    endo_paliativa = relationship("PalliativoEndocrinoterapia", back_populates="tratamento", cascade="all, delete-orphan")
-    imuno_paliativa = relationship("PalliativoImunoterapia", back_populates="tratamento", cascade="all, delete-orphan")
-    imunohistoquimicas = relationship("Imunohistoquimicas", back_populates="tratamento", cascade="all, delete-orphan")
+    # Relacionamentos 1:N
+    cirurgias = relationship("TratamentoCirurgia", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
+    quimio_paliativa = relationship("PalliativoQuimioterapia", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
+    radio_paliativa = relationship("PalliativoRadioterapia", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
+    endo_paliativa = relationship("PalliativoEndocrinoterapia", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
+    imuno_paliativa = relationship("PalliativoImunoterapia", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
+    imunohistoquimicas = relationship("Imunohistoquimicas", back_populates="tratamento", cascade="all, delete-orphan", lazy="noload")
 
 
 # =======================================================================
@@ -269,8 +269,8 @@ class Desfecho(Base):
     paciente = relationship("Paciente", back_populates="desfecho")
     
     # Relacionamentos 1:N
-    metastases = relationship("DesfechoMetastases", back_populates="desfecho", cascade="all, delete-orphan")
-    eventos = relationship("DesfechoEventos", back_populates="desfecho", cascade="all, delete-orphan")
+    metastases = relationship("DesfechoMetastases", back_populates="desfecho", cascade="all, delete-orphan", lazy="noload")
+    eventos = relationship("DesfechoEventos", back_populates="desfecho", cascade="all, delete-orphan", lazy="noload")
 
 
 # =======================================================================
