@@ -7,7 +7,7 @@ provider:
   architecture: x86_64 
   region: us-east-1
   stage: ${opt:stage, 'prod'}
-  memorySize: 512
+  memorySize: 1024
   timeout: 29
 
   environment:
@@ -90,8 +90,7 @@ functions:
           path: /{proxy+}
           method: ANY
 
-plugins:
-  - serverless-python-requirements
+plugins: []
 
 package:
   individually: false

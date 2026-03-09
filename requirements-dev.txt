@@ -1,0 +1,33 @@
+# Core FastAPI
+fastapi
+mangum
+python-multipart
+uvicorn[standard]
+
+# Database
+sqlalchemy
+# psycopg2-binary removido para desenvolvimento local (usando SQLite)
+
+# Validation - Lambda compatible versions
+pydantic
+pydantic-settings
+email-validator
+
+# Security
+python-jose[cryptography]
+passlib[bcrypt]
+cryptography
+slowapi
+
+# AWS
+boto3
+
+# Environment
+python-dotenv
+
+# HTTP
+requests
+
+# Excel Export
+pandas
+openpyxl
