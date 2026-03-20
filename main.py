@@ -434,10 +434,20 @@ def update_paciente(
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    db_paciente = crud.update_paciente(db, paciente_id=paciente_id, paciente=paciente)
-    if db_paciente is None:
-        raise HTTPException(status_code=404, detail="Recurso não encontrado")
-    return db_paciente
+    try:
+        db_paciente = crud.update_paciente(db, paciente_id=paciente_id, paciente=paciente)
+        if db_paciente is None:
+            raise HTTPException(status_code=404, detail="Recurso não encontrado")
+        return db_paciente
+    except HTTPException:
+        raise
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro ao atualizar paciente {paciente_id}: {type(e).__name__}: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Erro interno ao atualizar paciente: {type(e).__name__}: {str(e)}"
+        )
 
 @app.delete("/pacientes/{paciente_id}")
 def delete_paciente(
