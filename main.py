@@ -68,7 +68,8 @@ app = FastAPI(
     description="API para gerenciamento de formulários de pacientes oncológicos",
     version="1.0.0",
     # O Mangum geralmente lida com o root_path, mas é bom manter
-    root_path=root_path
+    root_path=root_path,
+    redirect_slashes=False
 )
 
 # Configurar CORS (Usando a lista de SAFE_ORIGINS/CORS_ORIGINS)
@@ -334,13 +335,28 @@ def create_session(ip_address: str) -> str:
 
 
 # Rotas protegidas para Paciente
+async def _create_paciente_handler(
+    paciente: schemas.PacienteCreate,
+    db: Session,
+    current_user: Dict[str, Any]
+):
+    return crud.create_paciente(db=db, paciente=paciente)
+
 @app.post("/pacientes/", response_model=schemas.Paciente)
+async def create_paciente_slash(
+    paciente: schemas.PacienteCreate = Body(...),
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    return await _create_paciente_handler(paciente, db, current_user)
+
+@app.post("/pacientes", response_model=schemas.Paciente)
 async def create_paciente(
     paciente: schemas.PacienteCreate = Body(...),
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    return crud.create_paciente(db=db, paciente=paciente)
+    return await _create_paciente_handler(paciente, db, current_user)
 
 @app.get("/pacientes/", response_model=List[schemas.Paciente])
 def read_pacientes(
