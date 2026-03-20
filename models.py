@@ -14,7 +14,7 @@ class Paciente(Base):
 
     # DADOS PESSOAIS E ENDEREÇO
     nome_completo = Column(String(255), nullable=False)
-    data_nascimento = Column(Date, nullable=False)
+    data_nascimento = Column(Date, nullable=True)
     genero = Column(String(50))
     estado_civil = Column(String(50))
     cor_etnia = Column(String(50))
@@ -88,12 +88,12 @@ class Paciente(Base):
     p_tempo_uso_aco = Column(String(50))
 
     # HISTÓRIA DA DOENÇA (HD)
-    hd_sinal_sintoma_principal = Column(Text, nullable=False)
+    hd_sinal_sintoma_principal = Column(Text, nullable=True)
     hd_outro_sinal_sintoma = Column(Text)
-    hd_data_sintomas = Column(Date, nullable=False)
-    hd_idade_diagnostico = Column(Integer, nullable=False)
+    hd_data_sintomas = Column(Date, nullable=True)
+    hd_idade_diagnostico = Column(Integer, nullable=True)
     hd_ecog = Column(String(50))
-    hd_lado_acometido = Column(String(50), nullable=False)
+    hd_lado_acometido = Column(String(50), nullable=True)
     hd_tamanho_tumoral_clinico = Column(Numeric(5, 2))
     hd_linfonodos_palpaveis = Column(String(10))
     hd_estadiamento_clinico = Column(String(50))
