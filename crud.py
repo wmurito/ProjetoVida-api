@@ -167,8 +167,17 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
     if not db_paciente:
         return None
     
-    # Salvar histórico
-    save_historico(db, db_paciente)
+    # Salvar histórico (não crítico — ignorar se tabela não existir)
+    try:
+        save_historico(db, db_paciente)
+    except Exception as e:
+        print(f"AVISO: Não foi possível salvar histórico: {type(e).__name__}: {str(e)}")
+        db.rollback()
+        # Re-buscar o paciente após rollback
+        db_paciente = get_paciente(db, paciente_id)
+        if not db_paciente:
+            return None
+
     
     # Extrair novos dados
     paciente_dict = paciente.dict(exclude={
@@ -197,86 +206,84 @@ def update_paciente(db: Session, paciente_id: int, paciente: schemas.PacienteCre
 
 
 def update_relacionamentos(db: Session, db_paciente, paciente: schemas.PacienteCreate):
-    """Atualiza todos os relacionamentos do paciente"""
-    
-    # Familiares - remover antigos e adicionar novos
+    """Atualiza todos os relacionamentos do paciente via queries explícitas (não usa lazy=noload)."""
+    paciente_id = db_paciente.id_paciente
+
+    # Familiares - deletar antigos e inserir novos via query direta
     if paciente.familiares is not None:
-        for familiar in db_paciente.familiares:
-            db.delete(familiar)
+        db.query(models.PacienteFamiliar).filter(
+            models.PacienteFamiliar.id_paciente == paciente_id
+        ).delete(synchronize_session=False)
         for familiar_data in paciente.familiares:
-            db_familiar = models.PacienteFamiliar(
+            db.add(models.PacienteFamiliar(
                 **familiar_data.dict(),
-                id_paciente=db_paciente.id_paciente
-            )
-            db.add(db_familiar)
-    
-    # Tratamento
+                id_paciente=paciente_id
+            ))
+
+    # Tratamento - buscar diretamente pelo id_paciente
     if paciente.tratamento:
-        if db_paciente.tratamento:
-            # Atualizar dados principais do tratamento
-            for key, value in paciente.tratamento.dict(exclude={
-                "cirurgias",
-                "quimio_paliativa", "radio_paliativa", "endo_paliativa",
-                "imuno_paliativa", "imunohistoquimicas"
-            }).items():
-                setattr(db_paciente.tratamento, key, value)
-            
-            # Remover relacionamentos antigos
-            for relacionamento in [
-                db_paciente.tratamento.cirurgias,
-                db_paciente.tratamento.quimio_paliativa,
-                db_paciente.tratamento.radio_paliativa,
-                db_paciente.tratamento.endo_paliativa,
-                db_paciente.tratamento.imuno_paliativa,
-                db_paciente.tratamento.imunohistoquimicas
-            ]:
-                for item in relacionamento:
-                    db.delete(item)
+        db_tratamento = db.query(models.Tratamento).filter(
+            models.Tratamento.id_paciente == paciente_id
+        ).first()
+
+        tratamento_campos = paciente.tratamento.dict(exclude={
+            "cirurgias", "quimio_paliativa", "radio_paliativa",
+            "endo_paliativa", "imuno_paliativa", "imunohistoquimicas"
+        })
+
+        if db_tratamento:
+            for key, value in tratamento_campos.items():
+                setattr(db_tratamento, key, value)
+            # Deletar sub-registros antigos
+            db.query(models.TratamentoCirurgia).filter(
+                models.TratamentoCirurgia.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
+            db.query(models.PalliativoQuimioterapia).filter(
+                models.PalliativoQuimioterapia.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
+            db.query(models.PalliativoRadioterapia).filter(
+                models.PalliativoRadioterapia.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
+            db.query(models.PalliativoEndocrinoterapia).filter(
+                models.PalliativoEndocrinoterapia.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
+            db.query(models.PalliativoImunoterapia).filter(
+                models.PalliativoImunoterapia.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
+            db.query(models.Imunohistoquimicas).filter(
+                models.Imunohistoquimicas.id_tratamento == db_tratamento.id_tratamento
+            ).delete(synchronize_session=False)
         else:
-            # Criar novo tratamento
-            db_tratamento = models.Tratamento(
-                **paciente.tratamento.dict(exclude={
-                    "cirurgias",
-                    "quimio_paliativa", "radio_paliativa", "endo_paliativa",
-                    "imuno_paliativa", "imunohistoquimicas"
-                }),
-                id_paciente=db_paciente.id_paciente
-            )
+            db_tratamento = models.Tratamento(**tratamento_campos, id_paciente=paciente_id)
             db.add(db_tratamento)
             db.flush()
-            db_paciente.tratamento = db_tratamento
-        
-        # Adicionar novos relacionamentos de tratamento
-        add_tratamento_relacionamentos(db, db_paciente.tratamento, paciente.tratamento)
-    
-    # Desfecho
+
+        add_tratamento_relacionamentos(db, db_tratamento, paciente.tratamento)
+
+    # Desfecho - buscar diretamente pelo id_paciente
     if paciente.desfecho:
-        if db_paciente.desfecho:
-            # Atualizar dados principais do desfecho
-            for key, value in paciente.desfecho.dict(exclude={
-                "metastases", "eventos"
-            }).items():
-                setattr(db_paciente.desfecho, key, value)
-            
-            # Remover relacionamentos antigos
-            for metastase in db_paciente.desfecho.metastases:
-                db.delete(metastase)
-            for evento in db_paciente.desfecho.eventos:
-                db.delete(evento)
+        db_desfecho = db.query(models.Desfecho).filter(
+            models.Desfecho.id_paciente == paciente_id
+        ).first()
+
+        desfecho_campos = paciente.desfecho.dict(exclude={"metastases", "eventos"})
+
+        if db_desfecho:
+            for key, value in desfecho_campos.items():
+                setattr(db_desfecho, key, value)
+            db.query(models.DesfechoMetastases).filter(
+                models.DesfechoMetastases.id_desfecho == db_desfecho.id_desfecho
+            ).delete(synchronize_session=False)
+            db.query(models.DesfechoEventos).filter(
+                models.DesfechoEventos.id_desfecho == db_desfecho.id_desfecho
+            ).delete(synchronize_session=False)
         else:
-            # Criar novo desfecho
-            db_desfecho = models.Desfecho(
-                **paciente.desfecho.dict(exclude={
-                    "metastases", "eventos"
-                }),
-                id_paciente=db_paciente.id_paciente
-            )
+            db_desfecho = models.Desfecho(**desfecho_campos, id_paciente=paciente_id)
             db.add(db_desfecho)
             db.flush()
-            db_paciente.desfecho = db_desfecho
-        
-        # Adicionar novos relacionamentos de desfecho
-        add_desfecho_relacionamentos(db, db_paciente.desfecho, paciente.desfecho)
+
+        add_desfecho_relacionamentos(db, db_desfecho, paciente.desfecho)
+
 
 
 def add_tratamento_relacionamentos(db: Session, db_tratamento, tratamento_data):
