@@ -84,7 +84,9 @@ app.add_middleware(
 # Handler para AWS Lambda (Mantido)
 handler = Mangum(app)
 
-# Dependência para obter sessão do banco de dados (Mantido)
+
+
+
 def get_db():
     db = SessionLocal()
     try:
@@ -380,41 +382,7 @@ def read_pacientes(
     
     return pacientes
 
-@app.get("/pacientes/test", response_model=dict)
-def test_pacientes_endpoint(
-    db: Session = Depends(get_db),
-    current_user: Dict[str, Any] = Depends(get_current_user)
-):
-    """
-    Endpoint de teste para verificar se a consulta na tabela PACIENTE está funcionando.
-    """
-    try:
-        # Contar total de pacientes na tabela
-        total_pacientes = db.query(models.Paciente).count()
-        
-        # Buscar alguns pacientes de exemplo
-        pacientes_exemplo = db.query(models.Paciente).limit(3).all()
-        
-        return {
-            "status": "success",
-            "message": "Consulta na tabela PACIENTE funcionando corretamente",
-            "total_pacientes": total_pacientes,
-            "exemplo_pacientes": [
-                {
-                    "id_paciente": p.id_paciente,
-                    "nome_completo": p.nome_completo,
-                    "data_nascimento": str(p.data_nascimento) if p.data_nascimento else None,
-                    "cidade": p.cidade
-                } for p in pacientes_exemplo
-            ]
-        }
-    except Exception as e:
-        return {
-            "status": "error",
-            "message": f"Erro na consulta: {str(e)}",
-            "total_pacientes": 0,
-            "exemplo_pacientes": []
-        }
+
 
 @app.get("/pacientes/{paciente_id}", response_model=schemas.Paciente)
 def read_paciente(
