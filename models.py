@@ -285,6 +285,11 @@ class TratamentoCirurgia(Base):
     tipo_procedimento = Column(String(50)) # mama, axila, reconstrucao
     procedimento = Column(String(100))
     data_cirurgia = Column(Date)
+    contexto_cirurgico = Column(String(50))
+    tecnica = Column(String(255))
+    tipo_histologico = Column(String(255))
+    margens = Column(String(100))
+    ampliacao_margem = Column(Boolean, default=False)
     
     tratamento = relationship("Tratamento", back_populates="cirurgias")
 

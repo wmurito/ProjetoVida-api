@@ -137,10 +137,28 @@ def create_paciente(db: Session, paciente: schemas.PacienteCreate):
 
 
 def get_paciente(db: Session, paciente_id: int):
-    """Busca paciente por ID"""
-    return db.query(models.Paciente).filter(
-        models.Paciente.id_paciente == paciente_id
-    ).first()
+    """Busca paciente por ID com todos os relacionamentos carregados"""
+    from sqlalchemy.orm import joinedload
+    return (
+        db.query(models.Paciente)
+        .options(
+            joinedload(models.Paciente.familiares),
+            joinedload(models.Paciente.tratamento).options(
+                joinedload(models.Tratamento.cirurgias),
+                joinedload(models.Tratamento.quimio_paliativa),
+                joinedload(models.Tratamento.radio_paliativa),
+                joinedload(models.Tratamento.endo_paliativa),
+                joinedload(models.Tratamento.imuno_paliativa),
+                joinedload(models.Tratamento.imunohistoquimicas),
+            ),
+            joinedload(models.Paciente.desfecho).options(
+                joinedload(models.Desfecho.metastases),
+                joinedload(models.Desfecho.eventos),
+            ),
+        )
+        .filter(models.Paciente.id_paciente == paciente_id)
+        .first()
+    )
 
 
 def get_pacientes(db: Session, skip: int = 0, limit: int = 100):

@@ -428,6 +428,52 @@ def delete_paciente(
         raise HTTPException(status_code=404, detail="Recurso não encontrado")
     return {"success": True}
 
+# ============================================================
+# ENDPOINT TEMPORÁRIO DE MIGRAÇÃO — REMOVER APÓS USO!
+# ============================================================
+@app.post("/admin/migrate")
+def run_migration(
+    db: Session = Depends(get_db),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Migração temporária: adiciona novas colunas à tabela tratamento_cirurgia.
+    REMOVER ESTE ENDPOINT APÓS EXECUTAR COM SUCESSO EM PRODUÇÃO.
+    """
+    from sqlalchemy import text, inspect as sa_inspect
+
+    results = []
+
+    # Novas colunas em tratamento_cirurgia
+    new_cols_cirurgia = [
+        ("contexto_cirurgico", "VARCHAR(50)"),
+        ("tecnica",            "VARCHAR(255)"),
+        ("tipo_histologico",   "VARCHAR(255)"),
+        ("margens",            "VARCHAR(100)"),
+        ("ampliacao_margem",   "BOOLEAN DEFAULT FALSE"),
+    ]
+
+    try:
+        inspector = sa_inspect(db.bind)
+        existing_cols = [col["name"] for col in inspector.get_columns("tratamento_cirurgia")]
+        results.append({"tabela": "tratamento_cirurgia", "colunas_existentes": existing_cols})
+
+        for col_name, col_type in new_cols_cirurgia:
+            if col_name not in existing_cols:
+                db.execute(text(f"ALTER TABLE tratamento_cirurgia ADD COLUMN {col_name} {col_type}"))
+                results.append({"acao": "adicionada", "coluna": col_name})
+                logger.info(f"Migração: coluna '{col_name}' adicionada a tratamento_cirurgia")
+            else:
+                results.append({"acao": "ja_existe", "coluna": col_name})
+
+        db.commit()
+        return {"status": "ok", "resultados": results}
+
+    except Exception as e:
+        db.rollback()
+        logger.error(f"Erro na migração: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro na migração: {str(e)}")
+
 # Rota para histórico (protegida) (Mantido)
 @app.get("/pacientes/{paciente_id}/historico")
 def read_paciente_historico(

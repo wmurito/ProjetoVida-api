@@ -39,6 +39,11 @@ class CirurgiaBase(BaseModel):
     tipo_procedimento: Optional[str] = None  # mama, axila, reconstrucao
     procedimento: Optional[str] = None
     data_cirurgia: Optional[date] = None
+    contexto_cirurgico: Optional[str] = None
+    tecnica: Optional[str] = None
+    tipo_histologico: Optional[str] = None
+    margens: Optional[str] = None
+    ampliacao_margem: Optional[bool] = False
 
 class CirurgiaCreate(CirurgiaBase):
     pass
@@ -418,11 +423,35 @@ class PacienteCreate(PacienteBase):
     tratamento: Optional[TratamentoCreate] = None
     desfecho: Optional[DesfechoCreate] = None
 
+class Tratamento(TratamentoBase):
+    id_tratamento: int
+    id_paciente: int
+    cirurgias: Optional[List[Cirurgia]] = []
+    quimio_paliativa: Optional[List[PalliativoQuimioterapia]] = []
+    radio_paliativa: Optional[List[PalliativoRadioterapia]] = []
+    endo_paliativa: Optional[List[PalliativoEndocrinoterapia]] = []
+    imuno_paliativa: Optional[List[PalliativoImunoterapia]] = []
+    imunohistoquimicas: Optional[List[Imunohistoquimica]] = []
+
+    class Config:
+        orm_mode = True
+
+class Desfecho(DesfechoBase):
+    id_desfecho: int
+    id_paciente: int
+    metastases: Optional[List[Metastase]] = []
+    eventos: Optional[List[Evento]] = []
+
+    class Config:
+        orm_mode = True
+
 class Paciente(PacienteBase):
     id_paciente: int
     
     # Relacionamentos 1:N
     familiares: Optional[List[Familiar]] = []
+    tratamento: Optional[Tratamento] = None
+    desfecho: Optional[Desfecho] = None
     
     class Config:
         orm_mode = True
