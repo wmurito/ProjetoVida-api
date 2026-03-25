@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, status, Body
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from starlette.background import BackgroundTask
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -84,6 +84,11 @@ app.add_middleware(
 # Handler para AWS Lambda (Mantido)
 handler = Mangum(app)
 
+# Rate limiter (MOVIDO PARA O TOPO para funcionar com os decorators)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 
 
 
@@ -161,38 +166,34 @@ def read_users_me(current_user: Dict[str, Any] = Depends(get_current_user)):
 
 # Rota de exportação para Excel (Mantido)
 @app.get('/api/pacientes/exportar_excel')
+@limiter.limit("5/minute")
 def api_exportar_pacientes_excel(
+    request: Request,
     db: Session = Depends(get_db),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
-    filepath = exportar.gerar_relatorio_pacientes_excel()
+    import io
     
-    if filepath:
+    excel_bytes = exportar.gerar_relatorio_pacientes_excel()
+    
+    if excel_bytes:
         try:
-            filename = os.path.basename(filepath)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"relatorio_pacientes_{timestamp}.xlsx"
             
-            def remove_file():
-                try:
-                    os.remove(filepath)
-                except Exception as error:
-                    logger.error(f"Erro ao remover arquivo: {error}")
-            
-            return FileResponse(
-                path=filepath, 
-                filename=filename, 
-                media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                background=BackgroundTask(remove_file)
+            response = StreamingResponse(
+                iter([excel_bytes]),
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
+            response.headers["Content-Disposition"] = f"attachment; filename={filename}"
+            return response
         except Exception as e:
-            logger.error(f"Erro ao enviar arquivo: {e}")
+            logger.error(f"Erro ao preparar arquivo em memória: {e}")
             raise HTTPException(status_code=500, detail="Erro ao preparar arquivo")
     else:
         raise HTTPException(status_code=500, detail="Falha ao gerar relatório")
 
-# Rate limiter e imports para upload (Mantido)
-limiter = Limiter(key_func=get_remote_address)
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+ 
 
 # Rota para testar autenticação com token (PROTEGIDA) (Mantido)
 @app.post("/auth/validate-token")
@@ -457,7 +458,9 @@ if __name__ == "__main__":
 # Rotas de Dashboard (Mantido, mas certifique-se que as funções foram importadas - AVISO no topo do arquivo)
 
 @app.get("/dashboard/estadiamento")
+@limiter.limit("30/minute")
 def dashboard_estadiamento(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -465,7 +468,9 @@ def dashboard_estadiamento(
 
 
 @app.get("/dashboard/sobrevida")
+@limiter.limit("30/minute")
 def dashboard_sobrevida(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -473,7 +478,9 @@ def dashboard_sobrevida(
 
 
 @app.get("/dashboard/recidiva")
+@limiter.limit("30/minute")
 def dashboard_recidiva(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -481,7 +488,9 @@ def dashboard_recidiva(
 
 
 @app.get("/dashboard/delta_t")
+@limiter.limit("30/minute")
 def dashboard_delta_t(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -489,7 +498,9 @@ def dashboard_delta_t(
 
 
 @app.get("/dashboard/genero")
+@limiter.limit("30/minute")
 def dashboard_genero(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -497,7 +508,9 @@ def dashboard_genero(
 
 
 @app.get("/dashboard/faixa_etaria")
+@limiter.limit("30/minute")
 def dashboard_faixa_etaria(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -505,7 +518,9 @@ def dashboard_faixa_etaria(
 
 
 @app.get("/dashboard/tipo_cirurgia")
+@limiter.limit("30/minute")
 def dashboard_tipo_cirurgia(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -513,7 +528,9 @@ def dashboard_tipo_cirurgia(
 
 
 @app.get("/dashboard/marcadores")
+@limiter.limit("30/minute")
 def dashboard_marcadores(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -521,7 +538,9 @@ def dashboard_marcadores(
 
 
 @app.get("/dashboard/historia_familiar")
+@limiter.limit("30/minute")
 def dashboard_historia_familiar(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -529,7 +548,9 @@ def dashboard_historia_familiar(
 
 
 @app.get("/dashboard/habitos_vida")
+@limiter.limit("30/minute")
 def dashboard_habitos_vida(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -537,7 +558,9 @@ def dashboard_habitos_vida(
 
 
 @app.get("/dashboard/resumo")
+@limiter.limit("30/minute")
 def dashboard_resumo(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
@@ -545,7 +568,9 @@ def dashboard_resumo(
 
 
 @app.get("/dashboard/estatisticas_temporais")
+@limiter.limit("30/minute")
 def dashboard_estatisticas_temporais(
+    request: Request,
     db: Session = Depends(get_db), 
     current_user: dict = Depends(get_current_user)
 ):
