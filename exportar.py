@@ -4,13 +4,12 @@ from sqlalchemy import create_engine
 from dotenv import load_dotenv
 import os
 import datetime
+import io
 
 # Carrega variáveis de ambiente (para DB_URL)
 load_dotenv()
 
 DB_URL = os.getenv('DATABASE_URL')
-# Define um diretório para salvar os arquivos Excel gerados temporariamente
-EXPORT_DIR = os.getenv('EXPORT_DIR', 'temp_exports') 
 
 def gerar_relatorio_pacientes_excel():
     """
@@ -174,36 +173,28 @@ def gerar_relatorio_pacientes_excel():
     
     if df.empty:
         print("ℹ️ Nenhum dado encontrado para exportar.")
-        # Você pode optar por retornar um arquivo vazio ou None
-        # Para este exemplo, retornaremos None se não houver dados
         return None
 
-    # Remover colunas duplicadas de 'paciente_id' e 'id' das tabelas juntadas, se desejar
-    # O alias na query já ajuda a diferenciá-los, mas o pandas pode não gostar de nomes de colunas idênticos se não tiver alias
-    # No entanto, com os alias na query como "ID (Tabela)", eles já são únicos.
-
-    # Criar o diretório de exportação se não existir
-    os.makedirs(EXPORT_DIR, exist_ok=True)
-    
-    timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"relatorio_completo_pacientes_{timestamp}.xlsx"
-    filepath = os.path.join(EXPORT_DIR, filename)
-    
-    print(f"💾 Gerando arquivo Excel em: {filepath}")
+    print("💾 Gerando arquivo Excel em memória...")
     try:
-        df.to_excel(filepath, index=False, engine='openpyxl')
-        print(f"✅ Arquivo Excel gerado com sucesso: {filepath}")
-        return filepath
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
+            df.to_excel(writer, index=False)
+        
+        excel_data = output.getvalue()
+        output.close()
+        print(f"✅ Arquivo Excel gerado com sucesso em memória.")
+        return excel_data
     except Exception as e:
-        print(f"Erro ao salvar o arquivo Excel: {e}")
+        print(f"Erro ao gerar o arquivo Excel na memória: {e}")
         return None
 
 if __name__ == '__main__':
     # Este bloco é para teste local do script
     print("--- Iniciando Teste de Exportação ---")
-    caminho_do_arquivo_gerado = gerar_relatorio_pacientes_excel()
-    if caminho_do_arquivo_gerado:
-        print(f"Arquivo de teste gerado em: {caminho_do_arquivo_gerado}")
+    bytes_data = gerar_relatorio_pacientes_excel()
+    if bytes_data:
+        print(f"Sucesso! Buffer gerado com {len(bytes_data)} bytes.")
     else:
-        print("Falha ao gerar o arquivo de teste.")
+        print("Falha ao gerar o buffer em memória.")
     print("--- Teste de Exportação Concluído ---")
