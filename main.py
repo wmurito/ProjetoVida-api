@@ -457,6 +457,12 @@ if __name__ == "__main__":
 
 # Rotas de Dashboard (Mantido, mas certifique-se que as funções foram importadas - AVISO no topo do arquivo)
 
+@app.get('/dashboard/resumo')
+@limiter.limit("30/minute")
+def dashboard_resumo(request: Request, db: Session = Depends(get_db)):
+    """Obtém os cartões do dashboard incluindo médias fixas que estavam zeradas."""
+    return dashboard.get_resumo_geral(db)
+
 @app.get("/dashboard/estadiamento")
 @limiter.limit("30/minute")
 def dashboard_estadiamento(
