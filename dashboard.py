@@ -332,36 +332,39 @@ def get_distribuicao_habitos_vida(db: Session):
 
 # ✅ 11. Resumo Geral do Dashboard
 def get_resumo_geral(db: Session):
-    """
-    Retorna um resumo geral com estatísticas principais.
-    """
     try:
-        # Total de pacientes
         total_pacientes = db.query(func.count(models.Paciente.id_paciente)).scalar() or 0
-        
-        # Pacientes com tratamento
         pacientes_com_tratamento = db.query(func.count(models.Tratamento.id_tratamento)).scalar() or 0
-        
-        # Pacientes com desfecho
         pacientes_com_desfecho = db.query(func.count(models.Desfecho.id_desfecho)).scalar() or 0
+        pacientes_vivos = db.query(func.count(models.Desfecho.id_desfecho)).filter(models.Desfecho.status_vital == 'Vivo').scalar() or 0
+        pacientes_recidiva = db.query(func.count(models.Desfecho.id_desfecho)).filter(or_(models.Desfecho.recidiva_local == True, models.Desfecho.recidiva_regional == True)).scalar() or 0
+        pacientes_metastase = db.query(func.count(models.Desfecho.id_desfecho)).filter(models.Desfecho.metastase_ocorreu == True).scalar() or 0
         
-        # Pacientes vivos
-        pacientes_vivos = db.query(func.count(models.Desfecho.id_desfecho)).filter(
-            models.Desfecho.status_vital == 'Vivo'
-        ).scalar() or 0
-        
-        # Pacientes com recidiva
-        pacientes_recidiva = db.query(func.count(models.Desfecho.id_desfecho)).filter(
-            or_(
-                models.Desfecho.recidiva_local == True,
-                models.Desfecho.recidiva_regional == True
-            )
-        ).scalar() or 0
-        
-        # Pacientes com metástase
-        pacientes_metastase = db.query(func.count(models.Desfecho.id_desfecho)).filter(
-            models.Desfecho.metastase_ocorreu == True
-        ).scalar() or 0
+        # Idade média diagnóstico
+        idade_media = db.query(func.avg(models.Paciente.hd_idade_diagnostico)).scalar()
+        idade_media = float(idade_media) if idade_media else 0.0
+
+        # Tamanho medio tumor
+        tamanho_medio = db.query(func.avg(models.Paciente.hd_tamanho_tumoral_clinico)).scalar()
+        tamanho_medio = float(tamanho_medio) if tamanho_medio else 0.0
+
+        # Médias de Risco (Strings no DB -> Converte manual)
+        riscos = db.query(models.Paciente.mp_score_gail, models.Paciente.mp_score_tyrer_cuzick).all()
+        s_gail = 0.0
+        c_gail = 0
+        s_tyrer = 0.0
+        c_tyrer = 0
+        for g, t in riscos:
+            if g:
+                try: 
+                    s_gail += float(g.replace('%', '').replace(',', '.').strip())
+                    c_gail += 1
+                except: pass
+            if t:
+                try: 
+                    s_tyrer += float(t.replace('%', '').replace(',', '.').strip())
+                    c_tyrer += 1
+                except: pass
 
         return {
             "total_pacientes": total_pacientes,
@@ -372,18 +375,107 @@ def get_resumo_geral(db: Session):
             "pacientes_metastase": pacientes_metastase,
             "taxa_sobrevida": round((pacientes_vivos / pacientes_com_desfecho * 100), 1) if pacientes_com_desfecho > 0 else 0,
             "taxa_recidiva": round((pacientes_recidiva / pacientes_com_desfecho * 100), 1) if pacientes_com_desfecho > 0 else 0,
-            "taxa_metastase": round((pacientes_metastase / pacientes_com_desfecho * 100), 1) if pacientes_com_desfecho > 0 else 0
+            "taxa_metastase": round((pacientes_metastase / pacientes_com_desfecho * 100), 1) if pacientes_com_desfecho > 0 else 0,
+            "idade_media_diagnostico": round(idade_media, 0),
+            "tamanho_medio_tumor": round(tamanho_medio, 1),
+            "media_risco_gail": round((s_gail / c_gail), 2) if c_gail > 0 else 0.0,
+            "media_risco_tyrer": round((s_tyrer / c_tyrer), 2) if c_tyrer > 0 else 0.0,
         }
     except Exception as e:
         logger.error(f"Erro ao buscar resumo geral: {str(e)}")
+        return {}
+
+
+# ✅ 12. Estatísticas Temporais para Gráfico Área
+def get_estatisticas_temporais(db: Session):
+    import datetime
+    try:
+        hoje = datetime.date.today()
+        meses = []
+        new_pacients = []
+        
+        # Gera ultimos 6 meses
+        for i in range(5, -1, -1):
+            m = hoje.replace(day=1) - datetime.timedelta(days=i*30)
+            mes = m.strftime('%b') # Jan, Feb
+            meses.append(mes)
+            new_pacients.append(0)
+            
         return {
-            "total_pacientes": 0,
-            "pacientes_com_tratamento": 0,
-            "pacientes_com_desfecho": 0,
-            "pacientes_vivos": 0,
-            "pacientes_recidiva": 0,
-            "pacientes_metastase": 0,
-            "taxa_sobrevida": 0,
-            "taxa_recidiva": 0,
-            "taxa_metastase": 0
+            "months": meses,
+            "newPatients": new_pacients,
+            "consultations": [0 for _ in meses]
         }
+    except:
+        return {"months": [], "newPatients": [], "consultations": []}
+
+    
+# ✅ 13. SUS Metrics (DeltaT, Estadiamento, Molecular) Direto do Banco!
+def get_sus_metrics(db: Session):
+    try:
+        # 1. Delta T
+        desfechos = db.query(models.Desfecho.td_data_diagnostico, models.Desfecho.td_data_inicio_tratamento).filter(
+            models.Desfecho.td_data_diagnostico.isnot(None),
+            models.Desfecho.td_data_inicio_tratamento.isnot(None)
+        ).all()
+        
+        under30 = under60 = under90 = over90 = validDeltaTFound = 0
+        for diag, trat in desfechos:
+            diff_days = (trat - diag).days
+            if diff_days >= 0:
+                if diff_days <= 30: under30 += 1
+                elif diff_days <= 60: under60 += 1
+                elif diff_days <= 90: under90 += 1
+                else: over90 += 1
+                validDeltaTFound += 1
+
+        # 2. Estadiamento
+        est_0 = db.query(func.count(models.Paciente.id_paciente)).filter(models.Paciente.hd_estadiamento_clinico.ilike('%0%')).scalar() or 0
+        est_1 = db.query(func.count(models.Paciente.id_paciente)).filter(models.Paciente.hd_estadiamento_clinico.ilike('%I%'), ~models.Paciente.hd_estadiamento_clinico.ilike('%II%'), ~models.Paciente.hd_estadiamento_clinico.ilike('%IV%')).scalar() or 0
+        est_2 = db.query(func.count(models.Paciente.id_paciente)).filter(models.Paciente.hd_estadiamento_clinico.ilike('%II%'), ~models.Paciente.hd_estadiamento_clinico.ilike('%III%')).scalar() or 0
+        est_3 = db.query(func.count(models.Paciente.id_paciente)).filter(models.Paciente.hd_estadiamento_clinico.ilike('%III%')).scalar() or 0
+        est_4 = db.query(func.count(models.Paciente.id_paciente)).filter(models.Paciente.hd_estadiamento_clinico.ilike('%IV%')).scalar() or 0
+
+        # 3. Molecular Count (Puxa do primeiro de tratamento)
+        ihq = db.query(models.Imunohistoquimicas.re, models.Imunohistoquimicas.rp, models.Imunohistoquimicas.her2).all()
+        luminal = her2 = tneg = indeterminado = 0
+        for rec in ihq:
+            re_pos = rec.re and ('pos' in rec.re.lower() or rec.re == 'P')
+            rp_pos = rec.rp and ('pos' in rec.rp.lower() or rec.rp == 'P')
+            rhPositivo = re_pos or rp_pos
+            her2Positivo = rec.her2 and ('3+' in rec.her2 or 'pos' in rec.her2.lower())
+            
+            re_neg = rec.re and ('neg' in rec.re.lower() or rec.re == 'N')
+            rp_neg = rec.rp and ('neg' in rec.rp.lower() or rec.rp == 'N')
+            her2Negativo = rec.her2 and ('0' in rec.her2 or '1+' in rec.her2 or 'neg' in rec.her2.lower())
+            
+            if rhPositivo: luminal += 1
+            elif her2Positivo and not rhPositivo: her2 += 1
+            elif re_neg and rp_neg and her2Negativo: tneg += 1
+            else: indeterminado += 1
+
+        return {
+            "deltaT": [
+                { "name": '0 a 30 dias', "value": under30, "itemStyle": { "color": '#10b981' } },
+                { "name": '31 a 60 dias\n(Alvo SUS)', "value": under60, "itemStyle": { "color": '#0ea5e9' } },
+                { "name": '61 a 90 dias\n(Atraso Moderado)', "value": under90, "itemStyle": { "color": '#f59e0b' } },
+                { "name": '> 90 dias\n(Atraso Grave)', "value": over90, "itemStyle": { "color": '#e11d48' } },
+            ],
+            "staging": [
+                { "name": 'EC 0', "value": est_0 },
+                { "name": 'EC I', "value": est_1 },
+                { "name": 'EC II', "value": est_2 },
+                { "name": 'EC III', "value": est_3 },
+                { "name": 'EC IV', "value": est_4 }
+            ],
+            "molecular": [
+                { "name": 'Luminal (RH+)', "value": luminal },
+                { "name": 'HER2+', "value": her2 },
+                { "name": 'Triplo Negativo', "value": tneg },
+                { "name": 'Desconhecido', "value": indeterminado }
+            ],
+            "validDeltaTFound": validDeltaTFound
+        }
+    except Exception as e:
+        logger.error(f"Erro ao buscar SUS metrics: {str(e)}")
+        return {}
