@@ -336,7 +336,14 @@ def get_resumo_geral(db: Session):
         total_pacientes = db.query(func.count(models.Paciente.id_paciente)).scalar() or 0
         pacientes_com_tratamento = db.query(func.count(models.Tratamento.id_tratamento)).scalar() or 0
         pacientes_com_desfecho = db.query(func.count(models.Desfecho.id_desfecho)).scalar() or 0
-        pacientes_vivos = db.query(func.count(models.Desfecho.id_desfecho)).filter(models.Desfecho.status_vital == 'Vivo').scalar() or 0
+        pacientes_vivos = db.query(func.count(models.Desfecho.id_desfecho)).filter(models.Desfecho.status_vital.ilike('%Vivo%')).scalar() or 0
+        pacientes_obito = db.query(func.count(models.Desfecho.id_desfecho)).filter(
+            or_(
+                models.Desfecho.status_vital.ilike('%óbito%'),
+                models.Desfecho.status_vital.ilike('%obito%'),
+                models.Desfecho.morte == True
+            )
+        ).scalar() or 0
         pacientes_recidiva = db.query(func.count(models.Desfecho.id_desfecho)).filter(or_(models.Desfecho.recidiva_local == True, models.Desfecho.recidiva_regional == True)).scalar() or 0
         pacientes_metastase = db.query(func.count(models.Desfecho.id_desfecho)).filter(models.Desfecho.metastase_ocorreu == True).scalar() or 0
         
@@ -371,6 +378,7 @@ def get_resumo_geral(db: Session):
             "pacientes_com_tratamento": pacientes_com_tratamento,
             "pacientes_com_desfecho": pacientes_com_desfecho,
             "pacientes_vivos": pacientes_vivos,
+            "pacientes_obito": pacientes_obito,
             "pacientes_recidiva": pacientes_recidiva,
             "pacientes_metastase": pacientes_metastase,
             "taxa_sobrevida": round((pacientes_vivos / pacientes_com_desfecho * 100), 1) if pacientes_com_desfecho > 0 else 0,
