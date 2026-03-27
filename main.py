@@ -17,7 +17,7 @@ from dashboard import (
     # **IMPORTANTE: Adicionar as outras funções de dashboard que faltaram na sua lista de imports**
     get_distribuicao_genero, get_distribuicao_faixa_etaria, get_distribuicao_tipo_cirurgia, 
     get_distribuicao_marcadores, get_distribuicao_historia_familiar, 
-    get_distribuicao_habitos_vida, get_resumo_geral
+    get_distribuicao_habitos_vida, get_resumo_geral, get_estatisticas_temporais, get_sus_metrics
 )
 from s3_service import s3_service
 from fastapi import File, UploadFile, Form
@@ -461,7 +461,17 @@ if __name__ == "__main__":
 @limiter.limit("30/minute")
 def dashboard_resumo(request: Request, db: Session = Depends(get_db)):
     """Obtém os cartões do dashboard incluindo médias fixas que estavam zeradas."""
-    return dashboard.get_resumo_geral(db)
+    return get_resumo_geral(db)
+
+@app.get("/dashboard/estatisticas_temporais")
+@limiter.limit("30/minute")
+def dashboard_estatisticas_temporais(request: Request, db: Session = Depends(get_db)):
+    return get_estatisticas_temporais(db)
+
+@app.get("/dashboard/sus_metrics")
+@limiter.limit("30/minute")
+def dashboard_sus_metrics(request: Request, db: Session = Depends(get_db)):
+    return get_sus_metrics(db)
 
 @app.get("/dashboard/estadiamento")
 @limiter.limit("30/minute")
