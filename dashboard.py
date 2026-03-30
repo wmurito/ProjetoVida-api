@@ -399,22 +399,71 @@ def get_estatisticas_temporais(db: Session):
     import datetime
     try:
         hoje = datetime.date.today()
-        meses = []
-        new_pacients = []
         
-        # Gera ultimos 6 meses
+        # Calcular data de corte (6 meses atrás, dia 1)
+        m_start = hoje.month - 5
+        y_start = hoje.year
+        if m_start <= 0:
+            m_start += 12
+            y_start -= 1
+        data_corte = datetime.date(y_start, m_start, 1)
+
+        # 1. Buscar apenas as datas dos novos pacientes (a partir da data_corte)
+        pacientes_datas = db.query(models.Desfecho.td_data_primeira_consulta).filter(
+            models.Desfecho.td_data_primeira_consulta >= data_corte
+        ).all()
+
+        # 2. Buscar apenas as datas e IDs de histórico (a partir da data_corte)
+        consultas_historico = db.query(models.PacienteHistorico.data_modificacao, models.PacienteHistorico.id_paciente).filter(
+            models.PacienteHistorico.data_modificacao >= data_corte
+        ).all()
+
+        # Estruturas de agrupamento em memória (dicionários por chave "YYYY-MM")
+        contagem_pacientes = {}
+        contagem_consultas = {}
+
+        for pd in pacientes_datas:
+            d = pd[0]
+            if d:
+                chave = f"{d.year}-{d.month:02d}"
+                contagem_pacientes[chave] = contagem_pacientes.get(chave, 0) + 1
+        
+        for ch in consultas_historico:
+            d = ch[0]
+            pid = ch[1]
+            if d:
+                chave = f"{d.year}-{d.month:02d}"
+                if chave not in contagem_consultas:
+                    contagem_consultas[chave] = set()
+                contagem_consultas[chave].add(pid)
+
+        meses = []
+        new_patients = []
+        consultations = []
+        
+        # Preencher o array final para os 6 meses garantindo zeros onde não há dados
         for i in range(5, -1, -1):
-            m = hoje.replace(day=1) - datetime.timedelta(days=i*30)
-            mes = m.strftime('%b') # Jan, Feb
-            meses.append(mes)
-            new_pacients.append(0)
+            m = hoje.month - i
+            y = hoje.year
+            if m <= 0:
+                m += 12
+                y -= 1
+            
+            chave = f"{y}-{m:02d}"
+            mes_nome = datetime.date(y, m, 1).strftime('%b').capitalize()
+            mes_ano_str = f"{mes_nome}/{str(y)[2:]}"
+            
+            meses.append(mes_ano_str)
+            new_patients.append(contagem_pacientes.get(chave, 0))
+            consultations.append(len(contagem_consultas.get(chave, set())))
             
         return {
             "months": meses,
-            "newPatients": new_pacients,
-            "consultations": [0 for _ in meses]
+            "newPatients": new_patients,
+            "consultations": consultations
         }
-    except:
+    except Exception as e:
+        logger.error(f"Erro nas estatísticas temporais: {str(e)}")
         return {"months": [], "newPatients": [], "consultations": []}
 
     

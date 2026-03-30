@@ -59,3 +59,10 @@ lambda-*.zip
 # Docs (manter apenas essenciais)
 *.md
 !README.md
+
+# Scripts e Deploy Locais
+*.ps1
+*.sh
+simple_cors_test.py
+all_git_files.txt
+deploy-*/

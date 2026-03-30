@@ -55,10 +55,10 @@ provider:
 
   vpc:
     securityGroupIds:
-      - REDACTED_SECURITY_GROUP_ID
+      - ${ssm:/projeto-vida/vpc/security-group-id}
     subnetIds:
-      - REDACTED_SUBNET_ID_1
-      - REDACTED_SUBNET_ID_2
+      - ${ssm:/projeto-vida/vpc/subnet-id-1}
+      - ${ssm:/projeto-vida/vpc/subnet-id-2}
 
 custom:
   pythonRequirements:
